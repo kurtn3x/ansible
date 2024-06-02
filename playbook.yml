@@ -1,0 +1,8 @@
+---
+- gather_facts: false
+  hosts: server
+  roles:
+    # - security
+    # - basic
+    # - web
+    - api

@@ -1,0 +1,32 @@
+---
+server:
+  hosts:
+    kurtn3x:
+      ansible_host: 193.218.118.220
+      ansible_user: root
+      ansible_web_user: kurtn3x
+      ansible_private_user: kurtn3x
+      web_root: /var/www/kurtn3x.xyz
+      web_folders:
+        - api
+        - www
+        - media
+        - ausbildung
+        - private-media
+      web_sources:
+        - source: git@github.com:kurtn3x/kurtn3x.xyz_quasar.git
+          dest: kurtn3x.xyz_quasar
+          server_dest: www
+          quasar_build: true
+        - source: git@github.com:kurtn3x/Ausbildungsseite.git
+          dest: Ausbildungsseite
+          server_dest: ausbildung
+          quasar_build: true
+      api:
+        source: git@github.com:kurtn3x/django-kurtn3x.git
+        dest: django-kurtn3x
+        server_dest: api
+      api_postgresql_user: kurtn3x
+      api_postgresql_database: kurtn3x
+      api_postgresql_password: 
+          

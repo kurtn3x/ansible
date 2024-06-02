@@ -1,0 +1,30 @@
+---
+- name: Install fail2ban and unattended-upgrades
+  ansible.builtin.apt:
+    name:
+      - fail2ban
+      - unattended-upgrades
+    update_cache: yes
+
+- name: Copy configurations
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - "fail2ban/jail.local"
+  register: result
+
+- name: Start & Enable fail2ban, restart if necessary
+  ansible.builtin.service:
+    name: fail2ban
+    state: "{{ 'restarted' if result.changed else 'started' }}"
+    enabled: yes
+
+- name: Start & Enable unattended-upgrades
+  ansible.builtin.service:
+    name: unattended-upgrades
+    state: started
+    enabled: yes

@@ -1,0 +1,71 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - git
+    update_cache: yes
+
+- name: Copy nginx configs
+  ansible.builtin.copy:
+    src: "files/nginx/"
+    dest: "/etc/nginx/"
+    owner: root
+    group: root
+    mode: '0644'
+
+- command: "ls /etc/nginx/sites-available"
+  register: sites
+
+- name: Create a symbolic links for sites
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ item }}"
+    dest: "/etc/nginx/sites-enabled/{{ item }}"
+    owner: root
+    group: root
+    state: link
+  loop: "{{ sites.stdout_lines }}"
+
+- name: Create www directories
+  ansible.builtin.file:
+    path: "{{ web_root }}/{{ item }}"
+    state: directory
+    owner: "{{ ansible_web_user }}"
+    group: "www-data"
+    mode: 0750
+  loop: "{{ web_folders }}"
+
+- name: Clone git repositories locally
+  ansible.builtin.git:
+    repo: "{{ item.source }}"
+    dest: "tmp/{{ item.dest }}"
+  loop: "{{ web_sources }}"
+  delegate_to: localhost
+
+- name: Install npm dependencies locally
+  ansible.builtin.command: npm install
+  args:
+    chdir: "tmp/{{ item.dest }}"
+  loop: "{{ web_sources }}"
+  when: item.quasar_build
+  delegate_to: localhost
+  register: result
+
+- name: Build quasar repositories locally
+  ansible.builtin.command: quasar build
+  args:
+    chdir: "tmp/{{ item.dest }}"
+  loop: "{{ web_sources }}"
+  when: item.quasar_build
+  delegate_to: localhost
+  register: result
+
+- name: Copy quasar sources
+  ansible.builtin.copy:
+    src: "tmp/{{ item.dest }}/dist/spa/"
+    dest: "{{ web_root }}/{{ item.server_dest }}"
+    owner: "{{ ansible_web_user }}"
+    group: www-data
+    mode: '0640'
+  loop: "{{ web_sources }}"
+  when: item.quasar_build

@@ -1,0 +1,20 @@
+server {
+    server_name ausbildung.kurtn3x.xyz;
+    charset utf-8;
+    source_charset utf-8; 
+    error_log off; 
+    access_log off;
+
+    root /var/www/kurtn3x.xyz/ausbildung;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+        client_max_body_size 0;
+    }
+}
+
+server {
+    listen 80;
+    server_name ausbildung.kurtn3x.xyz;
+}

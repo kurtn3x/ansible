@@ -1,0 +1,207 @@
+[INCLUDES]
+
+#before = paths-distro.conf
+before = paths-debian.conf
+
+# The DEFAULT allows a global definition of the options. They can be overridden
+# in each jail afterwards.
+
+[DEFAULT]
+
+#
+# MISCELLANEOUS OPTIONS
+#
+
+allowipv6 = auto
+
+# "bantime.increment" allows to use database for searching of previously banned ip's to increase a 
+# default ban time using special formula, default it is banTime * 1, 2, 4, 8, 16, 32...
+bantime.increment = true
+
+# "bantime.factor" is a coefficient to calculate exponent growing of the formula or common multiplier,
+# default value of factor is 1 and with default value of formula, the ban time 
+# grows by 1, 2, 4, 8, 16 ...
+bantime.factor = 2
+
+# "bantime.overalljails" (if true) specifies the search of IP in the database will be executed 
+# cross over all jails, if false (default), only current jail of the ban IP will be searched
+bantime.overalljails = true
+
+# --------------------
+
+# "ignoreself" specifies whether the local resp. own IP addresses should be ignored
+# (default is true). Fail2ban will not ban a host which matches such addresses.
+#ignoreself = true
+
+# "ignoreip" can be a list of IP addresses, CIDR masks or DNS hosts. Fail2ban
+# will not ban a host which matches an address in this list. Several addresses
+# can be defined using space (and/or comma) separator.
+ignoreip = 127.0.0.1/8 ::1
+
+# External command that will take an tagged arguments to ignore, e.g. <ip>,
+# and return true if the IP is to be ignored. False otherwise.
+#
+# ignorecommand = /path/to/command <ip>
+ignorecommand =
+
+# "bantime" is the number of seconds that a host is banned.
+bantime  = 45m
+
+# A host is banned if it has generated "maxretry" during the last "findtime" seconds.
+findtime  = 60m
+
+# "maxretry" is the number of failures before a host get banned.
+maxretry = 3
+
+# "maxmatches" is the number of matches stored in ticket (resolvable via tag <matches> in actions).
+maxmatches = %(maxretry)s
+
+backend = auto
+
+# "usedns" specifies if jails should trust hostnames in logs,
+#   warn when DNS lookups are performed, or ignore all hostnames in logs
+#
+# yes:   if a hostname is encountered, a DNS lookup will be performed.
+usedns = yes
+
+logencoding = auto
+
+# "enabled" enables the jails.
+#  By default all jails are disabled, and it should stay this way.
+enabled = false
+
+mode = normal
+
+# "filter" defines the filter to use by the jail.
+#  By default jails have names matching their filter name
+#
+filter = %(__name__)s[mode=%(mode)s]
+
+
+#
+# ACTIONS
+#
+
+# Some options used for actions
+
+# Default protocol
+protocol = tcp
+
+# Specify chain where jumps would need to be added in ban-actions expecting parameter chain
+chain = <known/chain>
+
+# Ports to be banned
+# Usually should be overridden in a particular jail
+port = 0:65535
+
+# Format of user-agent https://tools.ietf.org/html/rfc7231#section-5.5.3
+fail2ban_agent = Fail2Ban/%(fail2ban_version)s
+
+banaction = iptables-multiport
+banaction_allports = iptables-allports
+
+# The simplest action to take: ban only
+action_ = %(banaction)s[port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+
+# Choose default action.  To change, just override value of 'action' with the
+# interpolation to the chosen action shortcut (e.g.  action_mw, action_mwl, etc) in jail.local
+# globally (section [DEFAULT]) or per specific section
+action = %(action_)s
+
+
+#
+# JAILS
+#
+
+#
+# SSH servers
+#
+
+[sshd]
+
+# To use more aggressive sshd modes set filter parameter "mode" in jail.local:
+# normal (default), ddos, extra or aggressive (combines all).
+# See "tests/files/logs/sshd" or "filter.d/sshd.conf" for usage example and details.
+#mode   = normal
+backend = systemd
+enabled = true
+port    = ssh
+logpath = %(sshd_log)s
+
+#
+# HTTP servers
+#
+
+# To use more aggressive http-auth modes set filter parameter "mode" in jail.local:
+# normal (default), aggressive (combines all), auth or fallback
+# See "tests/files/logs/nginx-http-auth" or "filter.d/nginx-http-auth.conf" for usage example and details.
+[nginx-http-auth]
+# mode = normal
+port    = http,https
+logpath = %(nginx_error_log)s
+
+# To use 'nginx-limit-req' jail you should have `ngx_http_limit_req_module` 
+# and define `limit_req` and `limit_req_zone` as described in nginx documentation
+# http://nginx.org/en/docs/http/ngx_http_limit_req_module.html
+# or for example see in 'config/filter.d/nginx-limit-req.conf'
+[nginx-limit-req]
+port    = http,https
+logpath = %(nginx_error_log)s
+
+[nginx-botsearch]
+
+port     = http,https
+logpath  = %(nginx_error_log)s
+
+[nginx-bad-request]
+port    = http,https
+logpath = %(nginx_access_log)s
+
+#
+# HTTP Proxy servers
+#
+#
+
+[squid]
+
+port     =  80,443,3128,8080
+logpath = /var/log/squid/access.log
+
+#
+#
+# DNS servers
+#
+
+
+# !!! WARNING !!!
+#   Since UDP is connection-less protocol, spoofing of IP and imitation
+#   of illegal actions is way too simple.  Thus enabling of this filter
+#   might provide an easy way for implementing a DoS against a chosen
+#   victim. See
+#    http://nion.modprobe.de/blog/archives/690-fail2ban-+-dns-fail.html
+#   Please DO NOT USE this jail unless you know what you are doing.
+#
+# IMPORTANT: see filter.d/named-refused for instructions to enable logging
+# This jail blocks UDP traffic for DNS requests.
+# [named-refused-udp]
+#
+# filter   = named-refused
+# port     = domain,953
+# protocol = udp
+# logpath  = /var/log/named/security.log
+
+# IMPORTANT: see filter.d/named-refused for instructions to enable logging
+# This jail blocks TCP traffic for DNS requests.
+
+[named-refused]
+
+port     = domain,953
+logpath  = /var/log/named/security.log
+
+
+[nsd]
+
+port     = 53
+action_  = %(default/action_)s[name=%(__name__)s-tcp, protocol="tcp"]
+           %(default/action_)s[name=%(__name__)s-udp, protocol="udp"]
+logpath = /var/log/nsd.log

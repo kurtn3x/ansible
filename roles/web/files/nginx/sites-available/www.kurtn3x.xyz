@@ -1,0 +1,30 @@
+server {
+    server_name www.kurtn3x.xyz;
+    charset utf-8;
+    source_charset utf-8; 
+    include /etc/nginx/mime.types; 
+
+    root /var/www/kurtn3x.xyz/www;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+        client_max_body_size 0;
+
+        # HEADER
+        add_header 'Access-Control-Allow-Credentials' 'true';
+        add_header 'Access-Control-Allow-Origin' *;
+        add_header 'Access-Control-Allow-Methods' 'PUT, GET, POST, OPTIONS';
+        add_header 'Access-Control-Allow-Headers' 'x-csrftoken,sessionid,content-type';
+        add_header Strict-Transport-Security 'max-age=31536000; includeSubDomains; preload';
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header X-Frame-Options "SAMEORIGIN";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin" always;
+    }
+}
+
+server {
+    listen 80;
+    server_name www.kurtn3x.xyz;
+}
