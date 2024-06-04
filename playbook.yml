@@ -3,6 +3,6 @@
   hosts: server
   roles:
     # - security
-    # - basic
+    - basic
     # - web
-    - api
+    # - api

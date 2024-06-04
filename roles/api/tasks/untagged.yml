@@ -14,23 +14,23 @@
 
 # - name: Clone git repositories locally
 #   ansible.builtin.git:
-#     repo: "{{ api.source }}"
-#     dest: "tmp/{{ api.dest }}"
+#     repo: "{{ api_source.source }}"
+#     dest: "tmp/{{ api_source.dest }}"
 #   delegate_to: localhost
 
 # - name: Copy api sources
 #   ansible.builtin.copy:
-#     src: "tmp/{{ api.dest }}/"
-#     dest: "{{ web_root }}/{{ api.server_dest }}"
+#     src: "tmp/{{ api_source.dest }}/"
+#     dest: "{{ web_root }}/{{ api_source.server_dest }}"
 #     owner: "{{ ansible_web_user }}"
-#     group: www-data
-#     mode: '0640'
+#     group: nogroup
+#     mode: '0700'
 
 - name: Install Python Modules
   become: true
   become_user: "{{ ansible_web_user }}"
   ansible.builtin.pip:
-    virtualenv: "{{ web_root }}/{{ api.server_dest }}/.venv"
+    virtualenv: "{{ web_root }}/{{ api_source.server_dest }}/.venv"
     virtualenv_command: "python3.11 -m venv"
     name:
       - django
@@ -49,8 +49,9 @@
       - sqlparse
       - zipp
       - typing-extensions
+      - captcha
 
-- name: Create temporary venv to access postrgesql
+- name: Create temporary venv to access postgresql
   become: true
   become_user: postgres
   ansible.builtin.pip:
@@ -65,30 +66,33 @@
 
 - name: postgresql commands
   block:
-    - name: postgresql - Create a new database
-      community.postgresql.postgresql_db:
-        name: "{{ api_postgresql_database }}"
-        comment: kurtn3x
     - name: postgresql - Create user
       community.postgresql.postgresql_user:
         db: kurtn3x
         name: "{{ api_postgresql_user }}"
         password: "{{ api_postgresql_password }}"
         no_password_changes: true
+    - name: postgresql - Create a new database
+      community.postgresql.postgresql_db:
+        name: "{{ api_postgresql_database }}"
+        owner: "{{ api_postgresql_user }}"
     - command: psql -c "ALTER ROLE {{ api_postgresql_user }} SET client_encoding TO 'utf8';"
     - command: psql -c "ALTER ROLE {{ api_postgresql_user }} SET default_transaction_isolation TO 'read committed';"
     - command: psql -c "ALTER ROLE {{ api_postgresql_user }} SET timezone TO 'UTC';"
-    - name: grant postgres user all provileges on postgresdb
-      community.postgresql.postgresql_privs:
-        db: postgres
-        privs: ALL
-        type: database
-        obj: "{{ api_postgresql_database }}"
-        role: "{{ api_postgresql_user }}"
   become: true
   become_user: postgres
 
-
 - name: Reset python interpreter
   set_fact:
-    ansible_python_interpreter: "{{ web_root }}/{{ api.server_dest }}/.venv/bin/python"
+    ansible_python_interpreter: "{{ web_root }}/{{ api_source.server_dest }}/.venv/bin/python"
+
+- name: Migrate Django DB
+  block:
+    - command: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations"
+    - command: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations authentication"
+    - command: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations user_profile"
+    - command: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations files"
+    - command: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations vpn_torrent"
+    - command: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py migrate"
+  become: true
+  become_user: "{{ ansible_web_user }}"

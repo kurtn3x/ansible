@@ -6,7 +6,6 @@
       - python3.11-venv
       - vim
       - sudo
-      - zsh
       - curl
       - git
     update_cache: yes
@@ -14,31 +13,9 @@
 - name: Add private user
   ansible.builtin.user:
     name: "{{ ansible_private_user }}"
-    shell: /bin/zsh
+    shell: /bin/bash
     groups: sudo
     append: yes
-
-- name: Check if omz installed
-  stat:
-    path: "{{ lookup('ansible.builtin.env', 'ZSH') }}"
-  register: omz
-
-- name: Download omz
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
-    dest: /tmp/install_ohmyzsh.sh
-  become: true
-  become_user: "{{ ansible_private_user }}"
-  when: omz.stat.exists == false
-
-- name: Install omz
-  command: sh /tmp/install_ohmyzsh.sh --unattended
-  become: true
-  become_user: "{{ ansible_private_user }}"
-  register: install_result
-  failed_when: "'FAILED' in install_result.stderr"
-  changed_when: "'already exists' not in install_result.stdout"
-  when: omz.stat.exists == false
 
 - name: Make root use bash
   ansible.builtin.user:

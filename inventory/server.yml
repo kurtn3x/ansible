@@ -22,7 +22,7 @@ server:
           dest: Ausbildungsseite
           server_dest: ausbildung
           quasar_build: true
-      api:
+      api_source:
         source: git@github.com:kurtn3x/django-kurtn3x.git
         dest: django-kurtn3x
         server_dest: api
