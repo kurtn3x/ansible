@@ -1,6 +1,7 @@
 ---
 - name: Install basic packages
   ansible.builtin.apt:
+    update_cache: true
     name:
       - python3.11
       - python3.11-venv
@@ -8,17 +9,36 @@
       - sudo
       - curl
       - git
-    update_cache: yes
+      - bash
 
 - name: Add private user
   ansible.builtin.user:
     name: "{{ ansible_private_user }}"
     shell: /bin/bash
     groups: sudo
-    append: yes
+    append: true
 
 - name: Make root use bash
   ansible.builtin.user:
     name: root
     shell: /bin/bash
-    
+
+- name: Modify bashrc for root
+  ansible.builtin.lineinfile:
+    dest: /root/.bashrc
+    line: "{{ item }}"
+    owner: root
+  loop:
+    - "alias ll='ls -l'"
+    - "alias la='ls -la'"
+    - "alias l='ls -CF'"
+
+- name: Modify bashrc for private user
+  ansible.builtin.lineinfile:
+    dest: "/home/{{ ansible_private_user }}/.bashrc"
+    line: "{{ item }}"
+    owner: "{{ ansible_private_user }}"
+  loop:
+    - "alias ll='ls -l'"
+    - "alias la='ls -la'"
+    - "alias l='ls -CF'"

@@ -1,6 +1,7 @@
 ---
 - name: Install dependencies
   ansible.builtin.apt:
+    update_cache: true
     name:
       - postgresql
       - postgresql-contrib
@@ -10,7 +11,6 @@
       - python3-dev
       - libpq-dev
       - curl
-    update_cache: yes
 
 - name: Create private-media directory
   ansible.builtin.file:
@@ -18,7 +18,7 @@
     state: directory
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: 0750
+    mode: "0750"
 
 - name: Create media directory
   ansible.builtin.file:
@@ -26,23 +26,47 @@
     state: directory
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: 0755
+    mode: "0755"
 
 - name: Create wireguard psk folder
   ansible.builtin.file:
     path: "{{ wireguard_psk_save_path }}"
     state: directory
-    recurse: yes
+    recurse: true
     owner: "{{ ansible_web_user }}"
     group: nogroup
     mode: "0700"
+
+- name: Check if git repo has changes
+  ansible.builtin.git:
+    repo: "{{ api_source.source }}"
+    dest: "{{ web_root }}/{{ api_source.server_dest }}"
+    clone: false
+    update: false
+    version: main
+  register: git_info
+  become: true
+  become_user: "{{ ansible_web_user }}"
 
 - name: Clone api repository with git
   ansible.builtin.git:
     repo: "{{ api_source.source }}"
     dest: "{{ web_root }}/{{ api_source.server_dest }}"
+    force: true
+    version: main
   become: true
   become_user: "{{ ansible_web_user }}"
+  when: git_info.after != git_info.before
+
+- name: Set permissions for api folder
+  ansible.builtin.file:
+    path: "{{ web_root }}/{{ api_source.server_dest }}"
+    state: directory
+    owner: "{{ ansible_web_user }}"
+    recurse: true
+    group: nogroup
+    mode: u=rwX,g=,o=
+    follow: false
 
 - name: Install Python Modules
   become: true
@@ -71,6 +95,7 @@
 
 - name: Get wireguard public-key for django-settings
   ansible.builtin.command: "cat /etc/wireguard/public.key"
+  changed_when: false
   register: public_key
 
 - name: Set wireguard public key variable for django-settings
@@ -106,65 +131,90 @@
   ansible.builtin.set_fact:
     ansible_python_interpreter: "/tmp/.venv/bin/python"
 
-- name: postgresql commands
+- name: Postgresql commands
+  become: true
+  become_user: postgres
   block:
-    - name: postgresql - Create user
+    - name: Postgresql - Create user
       community.postgresql.postgresql_user:
         db: kurtn3x
         name: "{{ api_postgresql_user }}"
         password: "{{ api_postgresql_password }}"
         no_password_changes: true
-    - name: postgresql - Create a new database
+    - name: Postgresql - Create a new database
       community.postgresql.postgresql_db:
         name: "{{ api_postgresql_database }}"
         owner: "{{ api_postgresql_user }}"
-    - name: postgresql - change client encoding of postgresql_user
+    # these will always show changed maybe fix that later
+    - name: Postgresql - change client encoding of postgresql_user
       ansible.builtin.command:
         cmd: psql -c "ALTER ROLE {{ api_postgresql_user }} SET client_encoding TO 'utf8';"
-    - name: postgresql - change default_transaction_isolation of postgresql_user
+      changed_when: true
+    - name: Postgresql - change default_transaction_isolation of postgresql_user
       ansible.builtin.command:
         cmd: psql -c "ALTER ROLE {{ api_postgresql_user }} SET default_transaction_isolation TO 'read committed';"
-    - name: postgresql - change timezone of postgresql_user
+      changed_when: true
+    - name: Postgresql - change timezone of postgresql_user
       ansible.builtin.command:
         cmd: psql -c "ALTER ROLE {{ api_postgresql_user }} SET timezone TO 'UTC';"
-  become: true
-  become_user: postgres
+      changed_when: true
 
 - name: Reset python interpreter
   ansible.builtin.set_fact:
     ansible_python_interpreter: "{{ web_root }}/{{ api_source.server_dest }}/.venv/bin/python"
 
 - name: Migrate Django DB
+  become: true
+  become_user: "{{ ansible_web_user }}"
   block:
-    - name: django - make general migrations
+    - name: Django - make general migrations
       ansible.builtin.command:
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
-    - name: django - make authentication migrations
+    - name: Django - make authentication migrations
       ansible.builtin.command:
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations authentication"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
-    - name: django - make user_profile migrations
+    - name: Django - make user_profile migrations
       ansible.builtin.command:
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations user_profile"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
-    - name: django - make files migrations
+    - name: Django - make files migrations
       ansible.builtin.command:
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations files"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
-    - name: django - make vpn_torrent migrations
+    - name: Django - make vpn_torrent migrations
       ansible.builtin.command:
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations vpn_torrent"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
-    - name: django - migrate
+    - name: Django - migrate
       ansible.builtin.command:
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py migrate"
       register: retval
       changed_when: '"No migrations to apply" not in retval.stdout'
-  become: true
-  become_user: "{{ ansible_web_user }}"
+    - name: Django - collect static files
+      ansible.builtin.command:
+        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py collectstatic --noinput"
+      register: retval
+      changed_when: '"0 static files copied" not in retval.stdout'
+
+- name: Copy gunicorn socket file
+  ansible.builtin.copy:
+    src: files/gunicorn.socket
+    dest: /etc/systemd/system/gunicorn.socket
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Generate gunicorn service file
+  ansible.builtin.template:
+    src: templates/gunicorn.service.j2
+    dest: /etc/systemd/system/gunicorn.service
+    owner: root
+    group: root
+    mode: "0755"

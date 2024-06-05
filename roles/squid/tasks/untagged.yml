@@ -1,0 +1,8 @@
+---
+- name: Install basic packages
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - squid
+      - apache2-utils
+# htpasswd -c /etc/squid/passwords your_squid_username passwort

@@ -1,0 +1,18 @@
+[Unit]
+Description=gunicorn daemon
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User={{ ansible_web_user }}
+Group=nogroup
+WorkingDirectory={{ web_root }}/{{ api_source.server_dest }}
+ExecStart={{ web_root }}/{{ api_source.server_dest }}/.venv/bin/gunicorn \
+          --access-logfile - \
+          --error-logfile - \
+          --workers 3 \
+          --bind unix:/run/gunicorn.sock \
+          kurtn3x_api.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

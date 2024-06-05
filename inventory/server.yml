@@ -9,6 +9,9 @@ server:
 
       web_root: /var/www/kurtn3x.xyz
 
+      # if quasar_build: clone sources via git, build them with quasar (npm & quasar required) and built files from dist/spa
+      # if not: clone via git and copy the result
+      # destination on remote is web_root + server_dest
       web_sources:
         - source: git@github.com:kurtn3x/kurtn3x.xyz_quasar.git
           dest: kurtn3x.xyz_quasar
@@ -28,7 +31,6 @@ server:
 
       api_source:
         source: git@github.com:kurtn3x/django-kurtn3x.git
-        dest: django-kurtn3x
         server_dest: api
       api_postgresql_user: kurtn3x
       api_postgresql_database: kurtn3x
@@ -48,3 +50,13 @@ server:
         32313533663232663761323331313532353664303433376338383263356339313166353731343865
         66326462326336356430313766343538373061653762373831633862636134663263373262386238
         356638656337343561353337356630393932
+
+      squid_users:
+        - name: kurtn3x
+          password: !vault |
+            $ANSIBLE_VAULT;1.1;AES256
+            64643039326133333033373662373332643963303832626433326363376164326638343365616330
+            3738663936623031656333333030616263643136396437340a353735326265363965666665336231
+            37653534343437366464393163646535393338636131633361386531333336626261663936633465
+            3062366239393630650a653966373762383939313034363036663239306532323764653234326664
+            3431

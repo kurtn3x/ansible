@@ -2,8 +2,8 @@
 - gather_facts: false
   hosts: server
   roles:
-    # - security
-    # - basic
+    - security
     - wireguard
-    # - web
+    - basic
+    - web
     - api

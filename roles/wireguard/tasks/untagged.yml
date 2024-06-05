@@ -1,26 +1,28 @@
 ---
 - name: Install dependencies
   ansible.builtin.apt:
+    update_cache: true
     name:
       - wireguard
-    update_cache: yes
 
 - name: Check if private key exists
-  stat:
+  ansible.builtin.stat:
     path: /etc/wireguard/private.key
   register: stat_result
 
 - name: Generate Private-Key
   ansible.builtin.shell:
-    cmd: wg genkey | tee /etc/wireguard/private.key
+    cmd: set -o pipefail && wg genkey | tee /etc/wireguard/private.key
+  changed_when: true
   register: private_key
   when: not stat_result.stat.exists
 
 - name: Get Private-Key
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: cat /etc/wireguard/private.key
   register: private_key
   when: stat_result.stat.exists
+  changed_when: false
 
 - name: Change file ownership, group and permissions
   ansible.builtin.file:
@@ -30,19 +32,22 @@
     mode: "0600"
 
 - name: Check if public key exists
-  stat:
+  ansible.builtin.stat:
     path: /etc/wireguard/public.key
+  changed_when: false
   register: stat_result
 
 - name: Generate Public-Key
   ansible.builtin.shell:
-    cmd: cat /etc/wireguard/private.key | wg pubkey | tee /etc/wireguard/public.key
+    cmd: set -o pipefail && cat /etc/wireguard/private.key | wg pubkey | tee /etc/wireguard/public.key
+  changed_when: true
   register: public_key
   when: not stat_result.stat.exists
 
 - name: Get Public-Key
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: cat /etc/wireguard/private.key
+  changed_when: false
   register: public_key
   when: stat_result.stat.exists
 
@@ -58,3 +63,25 @@
     owner: root
     group: root
     mode: "0600"
+
+- name: Enable IP-Forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Enable IP-Forwarding
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Enable and start wireguard
+  ansible.builtin.systemd_service:
+    name: wg-quick@wg0.service
+    state: started
+    enabled: true
