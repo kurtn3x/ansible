@@ -1,0 +1,12 @@
+[Interface]
+Address = {{ wireguard_server_ipv4 }}
+Address = {{ wireguard_server_ipv6 }}
+SaveConfig = true
+PostUp = ufw route allow in on wg0 out on {{ wireguard_out_interface }}
+PostUp = iptables -t nat -I POSTROUTING -o {{ wireguard_out_interface }} -j MASQUERADE
+PostUp = ip6tables -t nat -I POSTROUTING -o {{ wireguard_out_interface }} -j MASQUERADE
+PreDown = ufw route delete allow in on wg0 out on {{ wireguard_out_interface }}
+PreDown = iptables -t nat -D POSTROUTING -o {{ wireguard_out_interface }} -j MASQUERADE
+PreDown = ip6tables -t nat -D POSTROUTING -o {{ wireguard_out_interface }} -j MASQUERADE
+ListenPort = 51820
+PrivateKey = {{ wireguard_server_private_key }}

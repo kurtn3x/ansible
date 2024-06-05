@@ -12,7 +12,7 @@
     dest: "/etc/nginx/"
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
 
 - command: "ls /etc/nginx/sites-available"
   register: sites
@@ -28,12 +28,12 @@
 
 - name: Create www directories
   ansible.builtin.file:
-    path: "{{ web_root }}/{{ item }}"
+    path: "{{ web_root }}/{{ item.server_dest }}"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: "www-data"
     mode: 0750
-  loop: "{{ web_folders }}"
+  loop: "{{ web_sources }}"
 
 - name: Clone git repositories locally
   ansible.builtin.git:
@@ -66,6 +66,6 @@
     dest: "{{ web_root }}/{{ item.server_dest }}"
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: '0640'
+    mode: "0640"
   loop: "{{ web_sources }}"
   when: item.quasar_build
