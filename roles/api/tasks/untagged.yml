@@ -202,6 +202,30 @@
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py collectstatic --noinput"
       register: retval
       changed_when: '"0 static files copied" not in retval.stdout'
+    - name: Django - create cache table
+      ansible.builtin.command:
+        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py createcachetable"
+      register: retval
+      changed_when: '"already exists" not in retval.stdout'
+
+- name: Set permissions for static api folder
+  ansible.builtin.file:
+    path: "{{ web_root }}/{{ api_source.server_dest }}"
+    state: directory
+    owner: "{{ ansible_web_user }}"
+    group: www-data
+    mode: u=rwX,g=rX,o=rX
+    follow: false
+
+- name: Set permissions for static api folder
+  ansible.builtin.file:
+    path: "{{ web_root }}/{{ api_source.server_dest }}/static"
+    state: directory
+    owner: "{{ ansible_web_user }}"
+    recurse: true
+    group: www-data
+    mode: u=rwX,g=rX,o=rX
+    follow: false
 
 - name: Copy gunicorn socket file
   ansible.builtin.copy:

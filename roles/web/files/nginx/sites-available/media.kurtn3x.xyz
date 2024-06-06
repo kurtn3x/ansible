@@ -1,11 +1,7 @@
 server {
+    listen 80;
     server_name media.kurtn3x.xyz;
     access_log off;
     error_log off;
     root /var/www/kurtn3x.xyz/media;
-}
-
-server {
-    listen 80;
-    server_name media.kurtn3x.xyz;
 }

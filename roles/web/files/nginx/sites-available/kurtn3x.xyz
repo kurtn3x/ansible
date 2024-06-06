@@ -1,0 +1,7 @@
+server {
+    listen 80;
+    server_name kurtn3x.xyz;
+    return 301 http://www.kurtn3x.xyz$request_uri;
+    access_log off;
+    error_log off;
+}

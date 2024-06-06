@@ -84,7 +84,7 @@
 - name: Enable and start wireguard
   ansible.builtin.systemd_service:
     name: wg-quick@wg0.service
-    state: started
+    state: restarted
     enabled: true
 
 - name: Set Firewall rules
@@ -115,5 +115,5 @@
     - name: Enable and start ufw
       ansible.builtin.service:
         name: ufw
-        state: started
+        state: restarted
         enabled: true

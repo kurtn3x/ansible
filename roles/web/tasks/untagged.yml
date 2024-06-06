@@ -9,11 +9,23 @@
 
 - name: Copy nginx configs
   ansible.builtin.copy:
-    src: "files/nginx/"
-    dest: "/etc/nginx/"
+    src: "files/nginx/{{ item }}"
+    dest: "/etc/nginx/{{ item }}"
     owner: root
     group: root
     mode: "0644"
+  loop:
+    - mime.types
+    - nginx.conf
+
+- name: Copy nginx sites
+  ansible.builtin.copy:
+    src: "files/nginx/sites-available/{{ item }}"
+    dest: "/etc/nginx/sites-available/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ web_nginx_sites }}"
 
 - name: Get copied sites
   ansible.builtin.command: "ls /etc/nginx/sites-available"
@@ -44,6 +56,7 @@
     dest: "tmp/{{ item.dest }}"
     version: main
   loop: "{{ web_sources }}"
+  when: item.rebuild
   delegate_to: localhost
 
 - name: Install npm dependencies locally
@@ -52,7 +65,7 @@
     chdir: "tmp/{{ item.dest }}"
   changed_when: true
   loop: "{{ web_sources }}"
-  when: item.quasar_build
+  when: item.quasar_build and item.rebuild
   delegate_to: localhost
   register: result
 
@@ -62,7 +75,7 @@
     chdir: "tmp/{{ item.dest }}"
   changed_when: true
   loop: "{{ web_sources }}"
-  when: item.quasar_build
+  when: item.quasar_build and item.rebuild
   delegate_to: localhost
   register: result
 
@@ -72,9 +85,9 @@
     dest: "{{ web_root }}/{{ item.server_dest }}"
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: "0640"
+    mode: "0755"
   loop: "{{ web_sources }}"
-  when: item.quasar_build
+  when: item.quasar_build and item.rebuild
 
 - name: Copy non-quasar sources
   ansible.builtin.copy:
@@ -82,9 +95,24 @@
     dest: "{{ web_root }}/{{ item.server_dest }}"
     owner: "{{ ansible_web_user }}"
     group: www-data
+    mode: "0755"
+  loop: "{{ web_sources }}"
+  when: not item.quasar_build and item.rebuild
+
+- name: Copy favicon
+  ansible.builtin.copy:
+    src: "files/statics"
+    dest: "{{ web_root }}/{{ item.server_dest }}/statics"
+    owner: "{{ ansible_web_user }}"
+    group: www-data
     mode: "0640"
   loop: "{{ web_sources }}"
-  when: not item.quasar_build
+
+- name: Enable and start nginx
+  ansible.builtin.systemd_service:
+    name: nginx
+    state: restarted
+    enabled: true
 
 - name: Set Firewall rules
   block:
@@ -105,5 +133,5 @@
     - name: Enable and start ufw
       ansible.builtin.service:
         name: ufw
-        state: started
+        state: restarted
         enabled: true

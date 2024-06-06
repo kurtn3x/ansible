@@ -17,10 +17,15 @@ server:
           dest: kurtn3x.xyz_quasar
           server_dest: www
           quasar_build: true
+          rebuild: false
         - source: git@github.com:kurtn3x/Ausbildungsseite.git
           dest: Ausbildungsseite
           server_dest: ausbildung
           quasar_build: true
+          rebuild: false
+
+      # which sites from files/nginx/sites-available should be copied
+      web_nginx_sites: []
 
       wireguard_out_interface: enp1s0
       wireguard_ipv4_network: 10.0.0.0/8
@@ -60,3 +65,8 @@ server:
             37653534343437366464393163646535393338636131633361386531333336626261663936633465
             3062366239393630650a653966373762383939313034363036663239306532323764653234326664
             3431
+
+      certbot_sites:
+        - www.kurtn3x.xyz
+        - ausbildung.kurtn3x
+        - media.kurtn3x.xyz

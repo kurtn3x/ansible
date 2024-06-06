@@ -25,7 +25,7 @@
 - name: Start & Enable unattended-upgrades
   ansible.builtin.service:
     name: unattended-upgrades
-    state: started
+    state: restarted
     enabled: true
 
 - name: Set Firewall rules
@@ -43,5 +43,5 @@
     - name: Enable and start ufw
       ansible.builtin.service:
         name: ufw
-        state: started
+        state: restarted
         enabled: true
