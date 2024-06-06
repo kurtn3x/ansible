@@ -1,10 +1,11 @@
 ---
-- name: Install nginx
+- name: Install nginx, git & ufw
   ansible.builtin.apt:
     update_cache: true
     name:
       - nginx
       - git
+      - ufw
 
 - name: Copy nginx configs
   ansible.builtin.copy:
@@ -84,3 +85,25 @@
     mode: "0640"
   loop: "{{ web_sources }}"
   when: not item.quasar_build
+
+- name: Set Firewall rules
+  block:
+    - name: Allow ssh (22), http (80) & https (443)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop:
+        - 22
+        - 80
+        - 443
+
+    - name: Enable Firewall and block traffic by default
+      community.general.ufw:
+        default: reject
+        state: enabled
+
+    - name: Enable and start ufw
+      ansible.builtin.service:
+        name: ufw
+        state: started
+        enabled: true

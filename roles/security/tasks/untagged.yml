@@ -1,5 +1,5 @@
 ---
-- name: Install fail2ban, unattended-upgrades and ufw
+- name: Install fail2ban, unattended-upgrades & ufw
   ansible.builtin.apt:
     update_cache: true
     name:
@@ -9,13 +9,11 @@
 
 - name: Copy configurations
   ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: "/etc/{{ item }}"
+    src: "files/fail2ban/jail.local"
+    dest: "/etc/fail2ban/jail.local"
     owner: root
     group: root
     mode: "0644"
-  loop:
-    - "fail2ban/jail.local"
   register: result
 
 - name: Start & Enable fail2ban, restart if necessary
@@ -30,36 +28,20 @@
     state: started
     enabled: true
 
-- name: Allow SSH, HTTP, HTTPS, SQUID
-  community.general.ufw:
-    rule: allow
-    port: "{{ item }}"
-  loop:
-    - 22
-    - 80
-    - 443
-    - 3128
+- name: Set Firewall rules
+  block:
+    - name: Allow ssh (22)
+      community.general.ufw:
+        rule: allow
+        port: 22
 
-- name: Allow SSH, HTTP, HTTPS, SQUID
-  community.general.ufw:
-    rule: allow
-    proto: udp
-    port: 51820
+    - name: Enable Firewall and block traffic by default
+      community.general.ufw:
+        default: reject
+        state: enabled
 
-- name: Allow SSH, HTTP, HTTPS, SQUID
-  community.general.ufw:
-    rule: allow
-    interface_in: wg0
-    port: 53
-
-- name: Allow Forwarding
-  community.general.ufw:
-    rule: allow
-    route: true
-    interface_in: wg0
-    interface_out: "{{ wireguard_out_interface }}"
-
-- name: Enable Firewall and block traffic by default
-  community.general.ufw:
-    default: reject
-    state: enabled
+    - name: Enable and start ufw
+      ansible.builtin.service:
+        name: ufw
+        state: started
+        enabled: true

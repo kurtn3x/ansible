@@ -1,9 +1,10 @@
 ---
-- name: Install dependencies
+- name: Install wireguard & ufw
   ansible.builtin.apt:
     update_cache: true
     name:
       - wireguard
+      - ufw
 
 - name: Check if private key exists
   ansible.builtin.stat:
@@ -67,7 +68,7 @@
 - name: Enable IP-Forwarding
   ansible.posix.sysctl:
     name: net.ipv4.ip_forward
-    value: '1'
+    value: "1"
     sysctl_set: true
     state: present
     reload: true
@@ -75,7 +76,7 @@
 - name: Enable IP-Forwarding
   ansible.posix.sysctl:
     name: net.ipv6.conf.all.forwarding
-    value: '1'
+    value: "1"
     sysctl_set: true
     state: present
     reload: true
@@ -85,3 +86,34 @@
     name: wg-quick@wg0.service
     state: started
     enabled: true
+
+- name: Set Firewall rules
+  block:
+    - name: Allow ssh (22)
+      community.general.ufw:
+        rule: allow
+        port: 22
+
+    - name: Allow wireguard (51820)
+      community.general.ufw:
+        rule: allow
+        proto: udp
+        port: 51820
+
+    - name: Allow forwarding from wg0 to out_interface
+      community.general.ufw:
+        rule: allow
+        route: true
+        interface_in: wg0
+        interface_out: "{{ wireguard_out_interface }}"
+
+    - name: Enable Firewall and block traffic by default
+      community.general.ufw:
+        default: reject
+        state: enabled
+
+    - name: Enable and start ufw
+      ansible.builtin.service:
+        name: ufw
+        state: started
+        enabled: true

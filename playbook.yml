@@ -1,5 +1,6 @@
 ---
-- gather_facts: false
+- name: Run playbook
+  gather_facts: false
   hosts: server
   roles:
     - security
@@ -7,3 +8,5 @@
     - basic
     - web
     - api
+    - squid
+    - dns

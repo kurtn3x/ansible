@@ -1,5 +1,5 @@
 ---
-- name: Install dependencies
+- name: Install required dependencies
   ansible.builtin.apt:
     update_cache: true
     name:
@@ -209,7 +209,7 @@
     dest: /etc/systemd/system/gunicorn.socket
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Generate gunicorn service file
   ansible.builtin.template:

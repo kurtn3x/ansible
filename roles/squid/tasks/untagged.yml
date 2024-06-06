@@ -1,8 +1,59 @@
 ---
-- name: Install basic packages
+- name: Install squid, apache2-utils & ufw
   ansible.builtin.apt:
     update_cache: true
     name:
       - squid
       - apache2-utils
-# htpasswd -c /etc/squid/passwords your_squid_username passwort
+      - ufw
+
+- name: Copy squid configuration
+  ansible.builtin.copy:
+    src: files/squid.conf
+    dest: /etc/squid/squid.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create passwords file
+  ansible.builtin.file:
+    path: /etc/squid/passwords
+    owner: root
+    group: root
+    mode: "0644"
+    state: touch
+    modification_time: preserve
+    access_time: preserve
+
+- name: Create squid users
+  ansible.builtin.command:
+    cmd: htpasswd -b /etc/squid/passwords {{ item.name }} {{ item.password }}
+  changed_when: true
+  loop: "{{ squid_users }}"
+
+- name: Start & Enable squid
+  ansible.builtin.service:
+    name: squid
+    state: started
+    enabled: true
+
+- name: Set Firewall rules
+  block:
+    - name: Allow ssh (22) & squid (3128)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop:
+        - 22
+        - 3128
+
+    - name: Enable Firewall and block traffic by default
+      community.general.ufw:
+        default: reject
+        state: enabled
+
+    - name: Enable and start ufw
+      ansible.builtin.service:
+        name: ufw
+        state: started
+        enabled: true
