@@ -32,7 +32,6 @@
   ansible.builtin.file:
     path: "{{ wireguard_psk_save_path }}"
     state: directory
-    recurse: true
     owner: "{{ ansible_web_user }}"
     group: nogroup
     mode: "0700"
@@ -48,7 +47,7 @@
   become: true
   become_user: "{{ ansible_web_user }}"
 
-- name: Clone api repository with git
+- name: Clone api repository with git if there are changes
   ansible.builtin.git:
     repo: "{{ api_source.source }}"
     dest: "{{ web_root }}/{{ api_source.server_dest }}"
@@ -58,7 +57,7 @@
   become_user: "{{ ansible_web_user }}"
   when: git_info.after != git_info.before
 
-- name: Set permissions for api folder
+- name: Set permissions for files in api folder
   ansible.builtin.file:
     path: "{{ web_root }}/{{ api_source.server_dest }}"
     state: directory
@@ -68,7 +67,15 @@
     mode: u=rwX,g=,o=
     follow: false
 
-- name: Install Python Modules
+- name: Set permissions for api folder
+  ansible.builtin.file:
+    path: "{{ web_root }}/{{ api_source.server_dest }}"
+    state: directory
+    owner: "{{ ansible_web_user }}"
+    group: www-data
+    mode: u=rwX,g=rX,o=
+
+- name: Install Python Modules for api
   become: true
   become_user: "{{ ansible_web_user }}"
   ansible.builtin.pip:
@@ -210,21 +217,12 @@
 
 - name: Set permissions for static api folder
   ansible.builtin.file:
-    path: "{{ web_root }}/{{ api_source.server_dest }}"
-    state: directory
-    owner: "{{ ansible_web_user }}"
-    group: www-data
-    mode: u=rwX,g=rX,o=rX
-    follow: false
-
-- name: Set permissions for static api folder
-  ansible.builtin.file:
     path: "{{ web_root }}/{{ api_source.server_dest }}/static"
     state: directory
     owner: "{{ ansible_web_user }}"
     recurse: true
     group: www-data
-    mode: u=rwX,g=rX,o=rX
+    mode: u=rwX,g=rX,o=
     follow: false
 
 - name: Copy gunicorn socket file
@@ -242,3 +240,9 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Enable and start gunicorn
+  ansible.builtin.systemd_service:
+    name: gunicorn
+    state: restarted
+    enabled: true

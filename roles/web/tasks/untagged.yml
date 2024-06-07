@@ -1,9 +1,11 @@
 ---
-- name: Install nginx, git & ufw
+- name: Install nginx, certbot, git & ufw
   ansible.builtin.apt:
     update_cache: true
     name:
       - nginx
+      - certbot
+      - python3-certbot-nginx
       - git
       - ufw
 
@@ -41,13 +43,19 @@
     state: link
   loop: "{{ sites.stdout_lines }}"
 
+- name: Run certbot for installed sites
+  ansible.builtin.command:
+    cmd: "certbot -d {{ item }}  --nginx --non-interactive --agree-tos -m kurtn3x@gmail.com"
+  changed_when: true
+  loop: "{{ web_nginx_sites }}"
+
 - name: Create www directories
   ansible.builtin.file:
     path: "{{ web_root }}/{{ item.server_dest }}"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: "www-data"
-    mode: "0750"
+    mode: u=rwX,g=rX,o=rX
   loop: "{{ web_sources }}"
 
 - name: Clone git repositories locally
@@ -56,7 +64,7 @@
     dest: "tmp/{{ item.dest }}"
     version: main
   loop: "{{ web_sources }}"
-  when: item.rebuild
+  when: item.enabled
   delegate_to: localhost
 
 - name: Install npm dependencies locally
@@ -65,7 +73,7 @@
     chdir: "tmp/{{ item.dest }}"
   changed_when: true
   loop: "{{ web_sources }}"
-  when: item.quasar_build and item.rebuild
+  when: item.quasar_build and item.enabled
   delegate_to: localhost
   register: result
 
@@ -75,19 +83,19 @@
     chdir: "tmp/{{ item.dest }}"
   changed_when: true
   loop: "{{ web_sources }}"
-  when: item.quasar_build and item.rebuild
+  when: item.quasar_build and item.enabled
   delegate_to: localhost
   register: result
 
 - name: Copy quasar sources
   ansible.builtin.copy:
     src: "tmp/{{ item.dest }}/dist/spa/"
-    dest: "{{ web_root }}/{{ item.server_dest }}"
+    dest: "{{ web_root }}/{{ item.server_dest }}/."
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: "0755"
+    mode: u=rwX,g=rX,o=rX
   loop: "{{ web_sources }}"
-  when: item.quasar_build and item.rebuild
+  when: item.quasar_build and item.enabled
 
 - name: Copy non-quasar sources
   ansible.builtin.copy:
@@ -95,17 +103,17 @@
     dest: "{{ web_root }}/{{ item.server_dest }}"
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: "0755"
+    mode: u=rwX,g=rX,o=rX
   loop: "{{ web_sources }}"
-  when: not item.quasar_build and item.rebuild
+  when: not item.quasar_build and item.enabled
 
 - name: Copy favicon
   ansible.builtin.copy:
-    src: "files/statics"
-    dest: "{{ web_root }}/{{ item.server_dest }}/statics"
+    src: "files/statics/"
+    dest: "{{ web_root }}/{{ item.server_dest }}/statics/."
     owner: "{{ ansible_web_user }}"
     group: www-data
-    mode: "0640"
+    mode: u=rwX,g=rX,o=rX
   loop: "{{ web_sources }}"
 
 - name: Enable and start nginx

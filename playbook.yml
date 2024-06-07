@@ -3,9 +3,9 @@
   gather_facts: false
   hosts: server
   roles:
+    - basic
     - security
     - wireguard
-    - basic
     - web
     - api
     - squid
