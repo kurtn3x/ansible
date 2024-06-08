@@ -31,8 +31,8 @@ FILE_UPLOAD_PERMISSIONS = 0o640
 SERVER_IP_ADDRESS = "{{ ansible_host }}"
 VPN_IPV4_NETWORK = "{{ wireguard_ipv4_network }}"
 VPN_IPV6_NETWORK = "{{ wireguard_ipv6_network }}"
-VPN_DNS_SERVER_IPV4 = "{{ wireguard_server_ipv4 }}"
-VPN_DNS_SERVER_IPV6 = "{{ wireguard_server_ipv6 }}"
+VPN_DNS_SERVER_IPV4 = "{{ wireguard_server_ipv4 | split('/') | first }}"
+VPN_DNS_SERVER_IPV6 = "{{ wireguard_server_ipv6 | split('/') | first }}"
 VPN_PSK_SAVE_PATH = "{{ wireguard_psk_save_path }}"
 VPN_SERVER_PUBLIC_KEY = "{{ wireguard_server_public_key }}"
 

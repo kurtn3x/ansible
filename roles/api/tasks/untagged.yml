@@ -36,18 +36,7 @@
     group: nogroup
     mode: "0700"
 
-- name: Check if git repo has changes
-  ansible.builtin.git:
-    repo: "{{ api_source.source }}"
-    dest: "{{ web_root }}/{{ api_source.server_dest }}"
-    clone: false
-    update: false
-    version: main
-  register: git_info
-  become: true
-  become_user: "{{ ansible_web_user }}"
-
-- name: Clone api repository with git if there are changes
+- name: Clone api repository with git
   ansible.builtin.git:
     repo: "{{ api_source.source }}"
     dest: "{{ web_root }}/{{ api_source.server_dest }}"
@@ -55,17 +44,6 @@
     version: main
   become: true
   become_user: "{{ ansible_web_user }}"
-  when: git_info.after != git_info.before
-
-- name: Set permissions for files in api folder
-  ansible.builtin.file:
-    path: "{{ web_root }}/{{ api_source.server_dest }}"
-    state: directory
-    owner: "{{ ansible_web_user }}"
-    recurse: true
-    group: nogroup
-    mode: u=rwX,g=,o=
-    follow: false
 
 - name: Set permissions for api folder
   ansible.builtin.file:
@@ -74,6 +52,26 @@
     owner: "{{ ansible_web_user }}"
     group: www-data
     mode: u=rwX,g=rX,o=
+
+- name: Find folders to set permissions
+  ansible.builtin.find:
+    paths: "{{ web_root }}/{{ api_source.server_dest }}"
+    excludes: '.venv,static,__pycache__'
+    file_type: any
+  register: permission_files
+
+- name: Set permissions to specific items in api folder
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: "{{ 'directory' if item.isdir else 'file' }}"
+    owner: "{{ ansible_web_user }}"
+    recurse: "{{ true if item.isdir else omit }}"
+    group: nogroup
+    mode: u=rwX,g=,o=
+    follow: false
+  loop: "{{ permission_files.files }}"
+  loop_control:
+    label: "Set permissions on {{ item.path }}"
 
 - name: Install Python Modules for api
   become: true
@@ -115,7 +113,7 @@
     dest: "{{ web_root }}/{{ api_source.server_dest }}/kurtn3x_api/settings.py"
     owner: kurtn3x
     group: nogroup
-    mode: "0700"
+    mode: "0600"
 
 - name: Generate .env-file from template
   ansible.builtin.template:
