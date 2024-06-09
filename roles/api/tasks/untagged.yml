@@ -102,6 +102,7 @@
   ansible.builtin.command: "cat /etc/wireguard/public.key"
   changed_when: false
   register: public_key
+  failed_when: '"No such file or directory" in public_key.stdout'
 
 - name: Set wireguard public key variable for django-settings
   ansible.builtin.set_fact:
