@@ -9,8 +9,8 @@
 
 - name: Copy squid configuration
   ansible.builtin.copy:
-    src: files/squid.conf
-    dest: /etc/squid/squid.conf
+    src: files/custom.conf
+    dest: /etc/squid/conf.d/custom.conf
     owner: root
     group: root
     mode: "0644"
