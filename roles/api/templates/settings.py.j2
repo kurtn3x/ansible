@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
-from django.template import Template
 import environ
 
 DEBUG = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+APPEND_SLASH = True
 
 AUTH_USER_MODEL = "authentication.User"
 ROOT_URLCONF = "kurtn3x_api.urls"
@@ -16,6 +16,7 @@ env = environ.Env()
 environ.Env.read_env()
 SECRET_KEY = env("SECRET_KEY")
 DB_PASSWORD = env("DB_PASSWORD")
+FERNET_KEY = env("FERNET_KEY").encode("utf-8")
 
 # MEDIA
 MEDIA_URL = "/media/"
@@ -26,6 +27,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1500
 DATA_UPLOAD_MAX_NUMBER_FILES = 350
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 FILE_UPLOAD_PERMISSIONS = 0o640
+FILE_MAX_PATH_LEN = 255
 
 # VPN
 SERVER_IP_ADDRESS = "{{ ansible_host }}"
@@ -73,6 +75,14 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.kurtn3x.xyz",
 ]
 
+# AXES
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 0.5
+AXES_RESET_ON_SUCCESS = True
+AXES_CACHE = "axes_cache"
+AXES_DISABLE_ACCESS_LOG = True
+AXES_LOCKOUT_PARAMETERS = ["ip_address"]
+
 # Internationalization
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -92,7 +102,11 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "captcha_cache",
-    }
+    },
+    "axes_cache": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "axes_cache",
+    },
 }
 
 # DATABASE
@@ -115,11 +129,21 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
+    "DEFAULT_RENDERER_CLASSES": (
+        "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
+        "djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer",
+    ),
+    "DEFAULT_PARSER_CLASSES": (
+        # If you use MultiPartFormParser or FormParser, we also have a camel case version
+        "djangorestframework_camel_case.parser.CamelCaseFormParser",
+        "djangorestframework_camel_case.parser.CamelCaseMultiPartParser",
+        "djangorestframework_camel_case.parser.CamelCaseJSONParser",
+        # Any other parsers
+    ),
 }
 
 AUTHENTICATION_BACKENDS = [
-    # AxesStandaloneBackend should be the first backend in the AUTHENTICATION_BACKENDS list.
-    # Django ModelBackend is the default authentication backend.
+    "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
@@ -135,7 +159,8 @@ INSTALLED_APPS = [
     "authentication",
     "user_profile",
     "files",
-    "vpn_torrent",
+    "vpn",
+    "axes",
 ]
 
 MIDDLEWARE = [
@@ -147,6 +172,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 TEMPLATES = [

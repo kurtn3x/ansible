@@ -12,6 +12,32 @@
       - libpq-dev
       - curl
 
+- name: Wipe existing database
+  become: true
+  become_user: postgres
+  when: api_redeploy
+  block:
+    - name: Create temporary venv for postgres commands
+      ansible.builtin.pip:
+        virtualenv: "/tmp/.venv"
+        virtualenv_command: "python3.11 -m venv"
+        name:
+          - psycopg2-binary
+    - name: Set temporary python interpreter for postgres commands
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: "/tmp/.venv/bin/python"
+    - name: Wipe database
+      community.postgresql.postgresql_db:
+        name: "{{ api_postgresql_database }}"
+        owner: "{{ api_postgresql_user }}"
+        state: absent
+
+- name: Wipe api folder
+  ansible.builtin.file:
+    state: absent
+    path: "{{ web_root }}/{{ api_source.server_dest }}"
+  when: api_redeploy
+
 - name: Create private-media directory
   ansible.builtin.file:
     path: "{{ web_root }}/private-media"
@@ -53,26 +79,6 @@
     group: www-data
     mode: u=rwX,g=rX,o=
 
-- name: Find folders to set permissions
-  ansible.builtin.find:
-    paths: "{{ web_root }}/{{ api_source.server_dest }}"
-    excludes: '.venv,static,__pycache__'
-    file_type: any
-  register: permission_files
-
-- name: Set permissions to specific items in api folder
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: "{{ 'directory' if item.isdir else 'file' }}"
-    owner: "{{ ansible_web_user }}"
-    recurse: "{{ true if item.isdir else omit }}"
-    group: nogroup
-    mode: u=rwX,g=,o=
-    follow: false
-  loop: "{{ permission_files.files }}"
-  loop_control:
-    label: "Set permissions on {{ item.path }}"
-
 - name: Install Python Modules for api
   become: true
   become_user: "{{ ansible_web_user }}"
@@ -97,6 +103,27 @@
       - zipp
       - typing-extensions
       - captcha
+      - djangorestframework-camel-case
+
+- name: Find folders to set permissions
+  ansible.builtin.find:
+    paths: "{{ web_root }}/{{ api_source.server_dest }}"
+    excludes: 'static,__pycache__'
+    file_type: any
+  register: permission_files
+
+- name: Set permissions to specific items in api folder
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: "{{ 'directory' if item.isdir else 'file' }}"
+    owner: "{{ ansible_web_user }}"
+    recurse: "{{ true if item.isdir else omit }}"
+    group: nogroup
+    mode: u=rwX,g=,o=
+    follow: false
+  loop: "{{ permission_files.files }}"
+  loop_control:
+    label: "Set permissions on {{ item.path }}"
 
 - name: Get wireguard public-key for django-settings
   ansible.builtin.command: "cat /etc/wireguard/public.key"
@@ -143,7 +170,6 @@
   block:
     - name: Postgresql - Create user
       community.postgresql.postgresql_user:
-        db: kurtn3x
         name: "{{ api_postgresql_user }}"
         password: "{{ api_postgresql_password }}"
         no_password_changes: true
@@ -193,9 +219,9 @@
         cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations files"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
-    - name: Django - make vpn_torrent migrations
+    - name: Django - make vpn migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations vpn_torrent"
+        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations vpn"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - migrate
