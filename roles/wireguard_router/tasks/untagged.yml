@@ -1,0 +1,119 @@
+---
+- name: Install wireguard & ufw
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - wireguard
+      - ufw
+
+- name: Check if private key exists
+  ansible.builtin.stat:
+    path: /etc/wireguard/private.key
+  register: stat_result
+
+- name: Generate Private-Key
+  ansible.builtin.shell:
+    cmd: set -o pipefail && wg genkey | tee /etc/wireguard/private.key
+  changed_when: true
+  register: private_key
+  when: not stat_result.stat.exists
+
+- name: Get Private-Key
+  ansible.builtin.command:
+    cmd: cat /etc/wireguard/private.key
+  register: private_key
+  when: stat_result.stat.exists
+  changed_when: false
+
+- name: Change file ownership, group and permissions
+  ansible.builtin.file:
+    path: /etc/wireguard/private.key
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Check if public key exists
+  ansible.builtin.stat:
+    path: /etc/wireguard/public.key
+  changed_when: false
+  register: stat_result
+
+- name: Generate Public-Key
+  ansible.builtin.shell:
+    cmd: set -o pipefail && cat /etc/wireguard/private.key | wg pubkey | tee /etc/wireguard/public.key
+  changed_when: true
+  register: public_key
+  when: not stat_result.stat.exists
+
+- name: Get Public-Key
+  ansible.builtin.command:
+    cmd: cat /etc/wireguard/private.key
+  changed_when: false
+  register: public_key
+  when: stat_result.stat.exists
+
+- name: Set privatekey to ansible variable
+  ansible.builtin.set_fact:
+    wireguard_server_private_key: "{{ private_key.stdout }}"
+    wireguard_server_public_key: "{{ public_key.stdout }}"
+
+- name: Create wg0.conf
+  ansible.builtin.template:
+    src: templates/wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Enable IP-Forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Enable IP-Forwarding
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Enable and start wireguard
+  ansible.builtin.systemd_service:
+    name: wg-quick@wg0.service
+    state: restarted
+    enabled: true
+
+- name: Set Firewall rules
+  block:
+    - name: Allow ssh (22)
+      community.general.ufw:
+        rule: allow
+        port: 22
+
+    - name: Allow wireguard (51820)
+      community.general.ufw:
+        rule: allow
+        proto: udp
+        port: 51820
+
+    - name: Allow forwarding from wg0 to out_interface
+      community.general.ufw:
+        rule: allow
+        route: true
+        interface_in: wg0
+        interface_out: "{{ wireguard_out_interface }}"
+
+    - name: Enable Firewall and block traffic by default
+      community.general.ufw:
+        default: reject
+        state: enabled
+
+    - name: Enable and start ufw
+      ansible.builtin.service:
+        name: ufw
+        state: restarted
+        enabled: true

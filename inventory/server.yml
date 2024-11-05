@@ -14,17 +14,11 @@ server:
       # destination on remote is web_root + server_dest
       # enabled specifies if the site should be copied
       # should be turned of manually if there are no changes
-      web_sources:
-        - source: git@github.com:kurtn3x/kurtn3x.xyz_quasar.git
-          dest: kurtn3x.xyz_quasar
-          server_dest: www
+      web_quasar_sources:
+        - source: /home/kurtn3x/main/kurtn3x.xyz_quasar
+          dest: www
           quasar_build: true
-          enabled: false
-        - source: git@github.com:kurtn3x/Ausbildungsseite.git
-          dest: Ausbildungsseite
-          server_dest: ausbildung
-          quasar_build: true
-          enabled: false
+          enabled: true
 
       # which sites from files/nginx/sites-available should be copied
       # the file should also be the same name as the servername in the config
@@ -41,7 +35,6 @@ server:
       wireguard_server_ipv4: 10.0.0.1/8
       wireguard_server_ipv6: fde9:9757:b59b::1/64
       wireguard_psk_save_path: /var/wireguard/psk
-
       api_source:
         source: git@github.com:kurtn3x/django-kurtn3x.git
         server_dest: api
@@ -64,7 +57,6 @@ server:
         66326462326336356430313766343538373061653762373831633862636134663263373262386238
         356638656337343561353337356630393932
       api_redeploy: true
-
       squid_users:
         - name: kurtn3x
           password: !vault |
@@ -74,3 +66,16 @@ server:
             37653534343437366464393163646535393338636131633361386531333336626261663936633465
             3062366239393630650a653966373762383939313034363036663239306532323764653234326664
             3431
+
+routing_server:
+  hosts:
+    temporary:
+      ansible_host: 85.235.66.68
+      ansible_user: root
+      ansible_private_user: kurtn3x
+      wireguard_out_interface: enp1s0
+      wireguard_ipv4_network: 10.0.0.0/8
+      wireguard_ipv6_network: fde9:9757:b59b::/64
+      wireguard_server_ipv4: 10.0.0.1/8
+      wireguard_server_ipv6: fde9:9757:b59b::1/64
+      wireguard_psk_save_path: /var/wireguard/psk

@@ -20,101 +20,79 @@
     - mime.types
     - nginx.conf
 
+- name: get local nginx configs
+  ansible.builtin.find:
+        paths: "{{ role_path }}/files/nginx/sites-available"
+  delegate_to: localhost
+  register: local_nginx_configs
+
+- name: get remote nginx configs
+  ansible.builtin.find:
+        paths: "/etc/nginx/sites-available"
+  register: remote_nginx_configs
+
 - name: Copy nginx sites
   ansible.builtin.copy:
-    src: "files/nginx/sites-available/{{ item }}"
-    dest: "/etc/nginx/sites-available/{{ item }}"
-    owner: root
-    group: root
-    mode: "0644"
-  loop: "{{ web_nginx_sites }}"
-
-- name: Get copied sites
-  ansible.builtin.command: "ls /etc/nginx/sites-available"
-  changed_when: false
-  register: sites
+    src: "{{ item.path }}"
+    dest: "/etc/nginx/sites-available/{{ item.path | basename }}"
+  loop: "{{ local_nginx_configs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: "item.path | basename not in remote_nginx_configs.files | map(attribute='path') | map('basename')"
 
 - name: Create a symbolic links for sites
   ansible.builtin.file:
-    src: "/etc/nginx/sites-available/{{ item }}"
-    dest: "/etc/nginx/sites-enabled/{{ item }}"
+    src: "/etc/nginx/sites-available/{{ item.path | basename }}"
+    dest: "/etc/nginx/sites-enabled/{{ item.path | basename }}"
     owner: root
     group: root
     state: link
-  loop: "{{ sites.stdout_lines }}"
+  loop: "{{ local_nginx_configs.files }}"
 
 - name: Run certbot for installed sites
   ansible.builtin.command:
     cmd: "certbot -d {{ item }}  --nginx --non-interactive --agree-tos -m kurtn3x@gmail.com"
   changed_when: true
-  loop: "{{ web_nginx_sites }}"
+  loop: "{{ local_nginx_configs }}"
+  when: "item.path | basename not in remote_nginx_configs.files | map(attribute='path') | map('basename')"
 
 - name: Create www directories
   ansible.builtin.file:
-    path: "{{ web_root }}/{{ item.server_dest }}"
+    path: "{{ web_root }}/{{ item.dest }}"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: "www-data"
     mode: u=rwX,g=rX,o=rX
-  loop: "{{ web_sources }}"
+  loop: "{{ web_quasar_sources }}"
 
-- name: Clone git repositories locally
-  ansible.builtin.git:
-    repo: "{{ item.source }}"
-    dest: "tmp/{{ item.dest }}"
-    version: main
-  loop: "{{ web_sources }}"
-  when: item.enabled
-  delegate_to: localhost
-
-- name: Install npm dependencies locally
-  ansible.builtin.command: npm install
-  args:
-    chdir: "tmp/{{ item.dest }}"
-  changed_when: true
-  loop: "{{ web_sources }}"
-  when: item.quasar_build and item.enabled
-  delegate_to: localhost
-  register: result
-
-- name: Build quasar repositories locally
+- name: Build quasar projects locally
   ansible.builtin.command: quasar build
   args:
-    chdir: "tmp/{{ item.dest }}"
+    chdir: "{{ item.source }}"
   changed_when: true
-  loop: "{{ web_sources }}"
+  loop: "{{ web_quasar_sources }}"
   when: item.quasar_build and item.enabled
   delegate_to: localhost
   register: result
 
 - name: Copy quasar sources
   ansible.builtin.copy:
-    src: "tmp/{{ item.dest }}/dist/spa/"
-    dest: "{{ web_root }}/{{ item.server_dest }}/."
+    src: "{{ item.source }}/dist/spa/"
+    dest: "{{ web_root }}/{{ item.dest }}/."
     owner: "{{ ansible_web_user }}"
     group: www-data
     mode: u=rwX,g=rX,o=rX
-  loop: "{{ web_sources }}"
+  loop: "{{ web_quasar_sources }}"
   when: item.quasar_build and item.enabled
-
-- name: Copy non-quasar sources
-  ansible.builtin.copy:
-    src: "tmp/{{ item.dest }}/"
-    dest: "{{ web_root }}/{{ item.server_dest }}"
-    owner: "{{ ansible_web_user }}"
-    group: www-data
-    mode: u=rwX,g=rX,o=rX
-  loop: "{{ web_sources }}"
-  when: not item.quasar_build and item.enabled
 
 - name: Copy favicon
   ansible.builtin.copy:
     src: "files/statics/"
-    dest: "{{ web_root }}/{{ item.server_dest }}/statics/."
+    dest: "{{ web_root }}/{{ item.dest }}/statics/."
     owner: "{{ ansible_web_user }}"
     group: www-data
     mode: u=rwX,g=rX,o=rX
-  loop: "{{ web_sources }}"
+  loop: "{{ web_quasar_sources }}"
 
 - name: Enable and start nginx
   ansible.builtin.systemd_service:
