@@ -1,7 +1,6 @@
 ---
-wireguard_server__out_interface: ens3
-wireguard_server__ipv4_network: 172.16.0.0/16
-wireguard_server__ipv6_network: fd01:9067:7d3a:e4da::/64
-wireguard_server__ipv4: 172.16.0.1/16
-wireguard_server__ipv6: fd01:9067:7d3a:e4da::1/64
-wireguard_server__psk_save_path: /var/wireguard/psk
+wireguard_server__router: true
+wireguard_server__router_gateway_public_key: P5nklo1I4+/3oTP0MVroW4FEd5TzkCmswlRkWN5IYno=
+wireguard_server__router_gateway_address: 193.218.118.220:51820
+wireguard_server__ipv4: 10.0.0.16/8
+wireguard_server__ipv6: fde9:9757:b59b::10/64
