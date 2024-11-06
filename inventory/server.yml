@@ -1,81 +1,11 @@
 ---
 server:
+  vars:
+    ansible_user: root
+    ansible_web_user: kurtn3x
+    ansible_private_user: kurtn3x
   hosts:
     kurtn3x:
       ansible_host: 193.218.118.220
-      ansible_user: root
-      ansible_web_user: kurtn3x
-      ansible_private_user: kurtn3x
-
-      web_root: /var/www/kurtn3x.xyz
-
-      # if quasar_build: clone sources via git, build them with quasar (npm & quasar required) and built files from dist/spa
-      # if not: clone via git and copy the result
-      # destination on remote is web_root + server_dest
-      # enabled specifies if the site should be copied
-      # should be turned of manually if there are no changes
-      web_quasar_sources:
-        - source: /home/kurtn3x/main/kurtn3x.xyz_quasar
-          dest: www
-          quasar_build: true
-          enabled: true
-
-      # which sites from files/nginx/sites-available should be copied
-      # the file should also be the same name as the servername in the config
-      web_nginx_sites:
-        - ausbildung.kurtn3x.xyz
-        - www.kurtn3x.xyz
-        - kurtn3x.xyz
-        - api.kurtn3x.xyz
-        - media.kurtn3x.xyz
-
-      wireguard_out_interface: enp1s0
-      wireguard_ipv4_network: 10.0.0.0/8
-      wireguard_ipv6_network: fde9:9757:b59b::/64
-      wireguard_server_ipv4: 10.0.0.1/8
-      wireguard_server_ipv6: fde9:9757:b59b::1/64
-      wireguard_psk_save_path: /var/wireguard/psk
-      api_source:
-        source: git@github.com:kurtn3x/django-kurtn3x.git
-        server_dest: api
-      api_postgresql_user: kurtn3x
-      api_postgresql_database: kurtn3x
-      api_postgresql_password: !vault |
-        $ANSIBLE_VAULT;1.1;AES256
-        64656563636230373235363735623138366166366661643638386633333865623464376436373935
-        6165303266366564333237656538323064643530363134630a373833303438386330306137343532
-        35656338313630336638356662353963633861323365386561333164373434633639343863646630
-        3931613566346434640a326465623562393932386162636565353236666335343833666438353939
-        3934
-      api_django_secret_key: !vault |
-        $ANSIBLE_VAULT;1.1;AES256
-        35646361343430366231336337656362323261333335623363653738363533383430306562326132
-        6232653365643036333664343537396364343261376139620a656230323337336331333235383338
-        37626462323762653134313262316136653438373566636365353338653762623765633634623735
-        6264303962323737610a333235343636323032653636646539666134633039303339303334336634
-        32313533663232663761323331313532353664303433376338383263356339313166353731343865
-        66326462326336356430313766343538373061653762373831633862636134663263373262386238
-        356638656337343561353337356630393932
-      api_redeploy: true
-      squid_users:
-        - name: kurtn3x
-          password: !vault |
-            $ANSIBLE_VAULT;1.1;AES256
-            64643039326133333033373662373332643963303832626433326363376164326638343365616330
-            3738663936623031656333333030616263643136396437340a353735326265363965666665336231
-            37653534343437366464393163646535393338636131633361386531333336626261663936633465
-            3062366239393630650a653966373762383939313034363036663239306532323764653234326664
-            3431
-
-routing_server:
-  hosts:
-    temporary:
+    wireguard_router:
       ansible_host: 85.235.66.68
-      ansible_user: root
-      ansible_private_user: kurtn3x
-      wireguard_out_interface: enp1s0
-      wireguard_ipv4_network: 10.0.0.0/8
-      wireguard_ipv6_network: fde9:9757:b59b::/64
-      wireguard_server_ipv4: 10.0.0.1/8
-      wireguard_server_ipv6: fde9:9757:b59b::1/64
-      wireguard_psk_save_path: /var/wireguard/psk

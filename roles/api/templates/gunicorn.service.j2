@@ -6,8 +6,8 @@ After=network.target
 [Service]
 User={{ ansible_web_user }}
 Group=www-data
-WorkingDirectory={{ web_root }}/{{ api_source.server_dest }}
-ExecStart={{ web_root }}/{{ api_source.server_dest }}/.venv/bin/gunicorn \
+WorkingDirectory={{ web__root }}/{{ api__source.server_dest }}
+ExecStart={{ web__root }}/{{ api__source.server_dest }}/.venv/bin/gunicorn \
           --access-logfile - \
           --error-logfile - \
           --workers 3 \

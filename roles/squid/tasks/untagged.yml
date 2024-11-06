@@ -29,7 +29,7 @@
   ansible.builtin.command:
     cmd: htpasswd -b /etc/squid/passwords {{ item.name }} {{ item.password }}
   changed_when: true
-  loop: "{{ squid_users }}"
+  loop: "{{ squid__users }}"
 
 - name: Start & Enable squid
   ansible.builtin.service:

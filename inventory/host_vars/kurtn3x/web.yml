@@ -1,0 +1,12 @@
+---
+web__root: /var/www/kurtn3x.xyz
+# if quasar_build: clone sources via git, build them with quasar (npm & quasar required) and built files from dist/spa
+# if not: clone via git and copy the result
+# destination on remote is web__root + server_dest
+# enabled specifies if the site should be copied
+# should be turned of manually if there are no changes
+web__quasar_sources:
+  - source: /home/kurtn3x/main/kurtn3x.xyz_quasar
+    dest: www
+    quasar_build: true
+    enabled: true

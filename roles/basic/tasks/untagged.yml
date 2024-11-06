@@ -13,10 +13,11 @@
 
 - name: Add private user
   ansible.builtin.user:
-    name: "{{ ansible_private_user }}"
+    name: '{{ ansible_private_user }}'
     shell: /bin/bash
     groups: sudo
     append: true
+  when: ansible_private_user is defined
 
 - name: Make root use bash
   ansible.builtin.user:
@@ -24,21 +25,33 @@
     shell: /bin/bash
 
 - name: Modify bashrc for root
-  ansible.builtin.lineinfile:
+  ansible.builtin.copy:
+    src: files/bashrc
     dest: /root/.bashrc
-    line: "{{ item }}"
     owner: root
-  loop:
-    - "alias ll='ls -l'"
-    - "alias la='ls -la'"
-    - "alias l='ls -CF'"
+    group: root
+    mode: '0644'
 
 - name: Modify bashrc for private user
-  ansible.builtin.lineinfile:
-    dest: "/home/{{ ansible_private_user }}/.bashrc"
-    line: "{{ item }}"
-    owner: "{{ ansible_private_user }}"
-  loop:
-    - "alias ll='ls -l'"
-    - "alias la='ls -la'"
-    - "alias l='ls -CF'"
+  ansible.builtin.copy:
+    src: files/bashrc
+    dest: '/home/{{ ansible_private_user }}/.bashrc'
+    owner: '{{ ansible_private_user }}'
+    group: '{{ ansible_private_user }}'
+    mode: '0644'
+  when: ansible_private_user is defined
+
+- name: Add authorized keys for root
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: '{{ item }}'
+  loop: '{{ basic__ssh_keys }}'
+
+- name: Add authorized keys for private user
+  ansible.posix.authorized_key:
+    user: '{{ ansible_private_user }}'
+    state: present
+    key: '{{ item }}'
+  loop: '{{ basic__ssh_keys }}'
+  when: ansible_private_user is defined

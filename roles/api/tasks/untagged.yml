@@ -15,7 +15,7 @@
 - name: Wipe existing database
   become: true
   become_user: postgres
-  when: api_redeploy
+  when: api__redeploy
   block:
     - name: Create temporary venv for postgres commands
       ansible.builtin.pip:
@@ -28,19 +28,19 @@
         ansible_python_interpreter: "/tmp/.venv/bin/python"
     - name: Wipe database
       community.postgresql.postgresql_db:
-        name: "{{ api_postgresql_database }}"
-        owner: "{{ api_postgresql_user }}"
+        name: "{{ api__postgresql_database }}"
+        owner: "{{ api__postgresql_user }}"
         state: absent
 
 - name: Wipe api folder
   ansible.builtin.file:
     state: absent
-    path: "{{ web_root }}/{{ api_source.server_dest }}"
-  when: api_redeploy
+    path: "{{ web__root }}/{{ api__source.server_dest }}"
+  when: api__redeploy
 
 - name: Create private-media directory
   ansible.builtin.file:
-    path: "{{ web_root }}/private-media"
+    path: "{{ web__root }}/private-media"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: www-data
@@ -48,7 +48,7 @@
 
 - name: Create media directory
   ansible.builtin.file:
-    path: "{{ web_root }}/media"
+    path: "{{ web__root }}/media"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: www-data
@@ -56,7 +56,7 @@
 
 - name: Create wireguard psk folder
   ansible.builtin.file:
-    path: "{{ wireguard_psk_save_path }}"
+    path: "{{ wireguard_server__psk_save_path }}"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: nogroup
@@ -64,8 +64,8 @@
 
 - name: Clone api repository with git
   ansible.builtin.git:
-    repo: "{{ api_source.source }}"
-    dest: "{{ web_root }}/{{ api_source.server_dest }}"
+    repo: "{{ api__source.source }}"
+    dest: "{{ web__root }}/{{ api__source.server_dest }}"
     force: true
     version: main
   become: true
@@ -73,7 +73,7 @@
 
 - name: Set permissions for api folder
   ansible.builtin.file:
-    path: "{{ web_root }}/{{ api_source.server_dest }}"
+    path: "{{ web__root }}/{{ api__source.server_dest }}"
     state: directory
     owner: "{{ ansible_web_user }}"
     group: www-data
@@ -83,7 +83,7 @@
   become: true
   become_user: "{{ ansible_web_user }}"
   ansible.builtin.pip:
-    virtualenv: "{{ web_root }}/{{ api_source.server_dest }}/.venv"
+    virtualenv: "{{ web__root }}/{{ api__source.server_dest }}/.venv"
     virtualenv_command: "python3.11 -m venv"
     name:
       - django
@@ -107,7 +107,7 @@
 
 - name: Find folders to set permissions
   ansible.builtin.find:
-    paths: "{{ web_root }}/{{ api_source.server_dest }}"
+    paths: "{{ web__root }}/{{ api__source.server_dest }}"
     excludes: 'static,__pycache__'
     file_type: any
   register: permission_files
@@ -138,7 +138,7 @@
 - name: Generate settings.py from template
   ansible.builtin.template:
     src: templates/settings.py.j2
-    dest: "{{ web_root }}/{{ api_source.server_dest }}/kurtn3x_api/settings.py"
+    dest: "{{ web__root }}/{{ api__source.server_dest }}/kurtn3x_api/settings.py"
     owner: kurtn3x
     group: nogroup
     mode: "0600"
@@ -146,7 +146,7 @@
 - name: Generate .env-file from template
   ansible.builtin.template:
     src: templates/.env.j2
-    dest: "{{ web_root }}/{{ api_source.server_dest }}/kurtn3x_api/.env"
+    dest: "{{ web__root }}/{{ api__source.server_dest }}/kurtn3x_api/.env"
     owner: kurtn3x
     group: nogroup
     mode: "0600"
@@ -170,30 +170,30 @@
   block:
     - name: Postgresql - Create user
       community.postgresql.postgresql_user:
-        name: "{{ api_postgresql_user }}"
-        password: "{{ api_postgresql_password }}"
+        name: "{{ api__postgresql_user }}"
+        password: "{{ api__postgresql_password }}"
         no_password_changes: true
     - name: Postgresql - Create a new database
       community.postgresql.postgresql_db:
-        name: "{{ api_postgresql_database }}"
-        owner: "{{ api_postgresql_user }}"
+        name: "{{ api__postgresql_database }}"
+        owner: "{{ api__postgresql_user }}"
     # these will always show changed maybe fix that later
     - name: Postgresql - change client encoding of postgresql_user
       ansible.builtin.command:
-        cmd: psql -c "ALTER ROLE {{ api_postgresql_user }} SET client_encoding TO 'utf8';"
+        cmd: psql -c "ALTER ROLE {{ api__postgresql_user }} SET client_encoding TO 'utf8';"
       changed_when: true
     - name: Postgresql - change default_transaction_isolation of postgresql_user
       ansible.builtin.command:
-        cmd: psql -c "ALTER ROLE {{ api_postgresql_user }} SET default_transaction_isolation TO 'read committed';"
+        cmd: psql -c "ALTER ROLE {{ api__postgresql_user }} SET default_transaction_isolation TO 'read committed';"
       changed_when: true
     - name: Postgresql - change timezone of postgresql_user
       ansible.builtin.command:
-        cmd: psql -c "ALTER ROLE {{ api_postgresql_user }} SET timezone TO 'UTC';"
+        cmd: psql -c "ALTER ROLE {{ api__postgresql_user }} SET timezone TO 'UTC';"
       changed_when: true
 
 - name: Reset python interpreter
   ansible.builtin.set_fact:
-    ansible_python_interpreter: "{{ web_root }}/{{ api_source.server_dest }}/.venv/bin/python"
+    ansible_python_interpreter: "{{ web__root }}/{{ api__source.server_dest }}/.venv/bin/python"
 
 - name: Migrate Django DB
   become: true
@@ -201,48 +201,48 @@
   block:
     - name: Django - make general migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make authentication migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations authentication"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations authentication"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make user_profile migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations user_profile"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations user_profile"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make files migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations files"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations files"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make vpn migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py makemigrations vpn"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations vpn"
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - migrate
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py migrate"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py migrate"
       register: retval
       changed_when: '"No migrations to apply" not in retval.stdout'
     - name: Django - collect static files
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py collectstatic --noinput"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py collectstatic --noinput"
       register: retval
       changed_when: '"0 static files copied" not in retval.stdout'
     - name: Django - create cache table
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web_root }}/{{ api_source.server_dest }}/manage.py createcachetable"
+        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py createcachetable"
       register: retval
       changed_when: '"already exists" not in retval.stdout'
 
 - name: Set permissions for static api folder
   ansible.builtin.file:
-    path: "{{ web_root }}/{{ api_source.server_dest }}/static"
+    path: "{{ web__root }}/{{ api__source.server_dest }}/static"
     state: directory
     owner: "{{ ansible_web_user }}"
     recurse: true

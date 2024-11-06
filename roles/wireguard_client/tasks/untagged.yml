@@ -1,0 +1,21 @@
+---
+- name: Install wireguard & resolvconf
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - wireguard
+      - resolvconf
+
+- name: Create wg1.conf
+  ansible.builtin.template:
+    src: templates/wg1.conf.j2
+    dest: /etc/wireguard/wg1.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Enable and start wireguard client
+  ansible.builtin.systemd_service:
+    name: wg-quick@wg1.service
+    state: restarted
+    enabled: true

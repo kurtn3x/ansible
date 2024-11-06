@@ -27,12 +27,12 @@ server:
   #Authorized IPs to access the DNS Server
   access-control: 0.0.0.0/0                 refuse
   access-control: 127.0.0.1                 allow
-  access-control: {{ wireguard_ipv4_network }}                 allow
-  access-control: {{ wireguard_ipv6_network }}                 allow
+  access-control: {{ wireguard_server__ipv4_network }}                 allow
+  access-control: {{ wireguard_server__ipv6_network }}                 allow
 
   #not allowed to be returned for public internet  names
-  private-address: {{ wireguard_ipv4_network }}
-  private-address: {{ wireguard_ipv6_network }}
+  private-address: {{ wireguard_server__ipv4_network }}
+  private-address: {{ wireguard_server__ipv6_network }}
 
   # Hide DNS Server info
   hide-identity: yes

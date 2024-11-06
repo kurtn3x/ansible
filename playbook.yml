@@ -5,8 +5,9 @@
   roles:
     - basic
     - security
-    - wireguard
     - web
     - api
     - squid
     - dns
+    - wireguard_server
+    - wireguard_client
