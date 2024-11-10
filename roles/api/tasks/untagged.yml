@@ -19,72 +19,64 @@
   block:
     - name: Create temporary venv for postgres commands
       ansible.builtin.pip:
-        virtualenv: "/tmp/.venv"
-        virtualenv_command: "python3.11 -m venv"
+        virtualenv: '/tmp/.venv'
+        virtualenv_command: 'python3.11 -m venv'
         name:
           - psycopg2-binary
     - name: Set temporary python interpreter for postgres commands
       ansible.builtin.set_fact:
-        ansible_python_interpreter: "/tmp/.venv/bin/python"
+        ansible_python_interpreter: '/tmp/.venv/bin/python'
     - name: Wipe database
       community.postgresql.postgresql_db:
-        name: "{{ api__postgresql_database }}"
-        owner: "{{ api__postgresql_user }}"
+        name: '{{ api__postgresql_database }}'
+        owner: '{{ api__postgresql_user }}'
         state: absent
 
 - name: Wipe api folder
   ansible.builtin.file:
     state: absent
-    path: "{{ web__root }}/{{ api__source.server_dest }}"
+    path: '{{ api__dest }}'
   when: api__redeploy
 
 - name: Create private-media directory
   ansible.builtin.file:
-    path: "{{ web__root }}/private-media"
+    path: '{{ web__root }}/private-media'
     state: directory
-    owner: "{{ ansible_web_user }}"
+    owner: '{{ ansible_web_user }}'
     group: www-data
-    mode: "0750"
+    mode: '0750'
 
 - name: Create media directory
   ansible.builtin.file:
-    path: "{{ web__root }}/media"
+    path: '{{ web__root }}/media'
     state: directory
-    owner: "{{ ansible_web_user }}"
+    owner: '{{ ansible_web_user }}'
     group: www-data
-    mode: "0755"
+    mode: '0755'
 
 - name: Create wireguard psk folder
   ansible.builtin.file:
-    path: "{{ wireguard_server__psk_save_path }}"
+    path: '{{ api__wireguard_psk_path }}'
     state: directory
-    owner: "{{ ansible_web_user }}"
+    owner: '{{ ansible_web_user }}'
     group: nogroup
-    mode: "0700"
+    mode: '0700'
 
-- name: Clone api repository with git
-  ansible.builtin.git:
-    repo: "{{ api__source.source }}"
-    dest: "{{ web__root }}/{{ api__source.server_dest }}"
-    force: true
-    version: main
-  become: true
-  become_user: "{{ ansible_web_user }}"
-
-- name: Set permissions for api folder
-  ansible.builtin.file:
-    path: "{{ web__root }}/{{ api__source.server_dest }}"
-    state: directory
-    owner: "{{ ansible_web_user }}"
-    group: www-data
-    mode: u=rwX,g=rX,o=
+- name: Copy api repository
+  ansible.posix.synchronize:
+    src: '{{ api__source }}/'
+    dest: '{{ api__dest }}'
+    recursive: true
+    archive: true
+  delegate_to: localhost
+  changed_when: true
 
 - name: Install Python Modules for api
   become: true
-  become_user: "{{ ansible_web_user }}"
+  become_user: '{{ ansible_web_user }}'
   ansible.builtin.pip:
-    virtualenv: "{{ web__root }}/{{ api__source.server_dest }}/.venv"
-    virtualenv_command: "python3.11 -m venv"
+    virtualenv: '{{ api__dest }}/.venv'
+    virtualenv_command: 'python3.11 -m venv'
     name:
       - django
       - django-axes
@@ -104,79 +96,62 @@
       - typing-extensions
       - captcha
       - djangorestframework-camel-case
+      - paramiko
 
-- name: Find folders to set permissions
-  ansible.builtin.find:
-    paths: "{{ web__root }}/{{ api__source.server_dest }}"
-    excludes: 'static,__pycache__'
-    file_type: any
-  register: permission_files
-
-- name: Set permissions to specific items in api folder
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: "{{ 'directory' if item.isdir else 'file' }}"
-    owner: "{{ ansible_web_user }}"
-    recurse: "{{ true if item.isdir else omit }}"
-    group: nogroup
-    mode: u=rwX,g=,o=
-    follow: false
-  loop: "{{ permission_files.files }}"
-  loop_control:
-    label: "Set permissions on {{ item.path }}"
+- name: Set python interpreter
+  ansible.builtin.set_fact:
+    ansible_python_interpreter: '{{ api__dest }}/.venv/bin/python'
 
 - name: Get wireguard public-key for django-settings
-  ansible.builtin.command: "cat /etc/wireguard/public.key"
+  ansible.builtin.command: 'cat /etc/wireguard/public.key'
   changed_when: false
-  register: public_key
-  failed_when: '"No such file or directory" in public_key.stdout'
+  register: pub_key
+  failed_when: '"No such file or directory" in pub_key.stdout'
+  when: not api__wireguard_public_key
 
 - name: Set wireguard public key variable for django-settings
   ansible.builtin.set_fact:
-    wireguard_server_public_key: "{{  public_key.stdout }}"
+    public_key: '{{  api__wireguard_public_key if api__wireguard_public_key else pub_key.stdout }}'
 
 - name: Generate settings.py from template
   ansible.builtin.template:
     src: templates/settings.py.j2
-    dest: "{{ web__root }}/{{ api__source.server_dest }}/kurtn3x_api/settings.py"
+    dest: '{{ api__dest }}/kurtn3x_api/settings.py'
     owner: kurtn3x
     group: nogroup
-    mode: "0600"
+    mode: '0600'
 
 - name: Generate .env-file from template
   ansible.builtin.template:
     src: templates/.env.j2
-    dest: "{{ web__root }}/{{ api__source.server_dest }}/kurtn3x_api/.env"
+    dest: '{{ api__dest }}/kurtn3x_api/.env'
     owner: kurtn3x
     group: nogroup
-    mode: "0600"
-
-- name: Create temporary venv for postgres commands
-  become: true
-  become_user: postgres
-  ansible.builtin.pip:
-    virtualenv: "/tmp/.venv"
-    virtualenv_command: "python3.11 -m venv"
-    name:
-      - psycopg2-binary
-
-- name: Set temporary python interpreter for postgres commands
-  ansible.builtin.set_fact:
-    ansible_python_interpreter: "/tmp/.venv/bin/python"
+    mode: '0600'
 
 - name: Postgresql commands
   become: true
   become_user: postgres
+  when: api__redeploy
   block:
+    - name: Create temporary venv for postgres commands
+      ansible.builtin.pip:
+        virtualenv: '/tmp/.venv'
+        virtualenv_command: 'python3.11 -m venv'
+        name:
+          - psycopg2-binary
+    - name: Set temporary python interpreter for postgres commands
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: '/tmp/.venv/bin/python'
     - name: Postgresql - Create user
       community.postgresql.postgresql_user:
-        name: "{{ api__postgresql_user }}"
-        password: "{{ api__postgresql_password }}"
+        name: '{{ api__postgresql_user }}'
+        password: '{{ api__postgresql_password }}'
         no_password_changes: true
     - name: Postgresql - Create a new database
       community.postgresql.postgresql_db:
-        name: "{{ api__postgresql_database }}"
-        owner: "{{ api__postgresql_user }}"
+        name: '{{ api__postgresql_database }}'
+        owner: '{{ api__postgresql_user }}'
     # these will always show changed maybe fix that later
     - name: Postgresql - change client encoding of postgresql_user
       ansible.builtin.command:
@@ -190,65 +165,73 @@
       ansible.builtin.command:
         cmd: psql -c "ALTER ROLE {{ api__postgresql_user }} SET timezone TO 'UTC';"
       changed_when: true
-
-- name: Reset python interpreter
-  ansible.builtin.set_fact:
-    ansible_python_interpreter: "{{ web__root }}/{{ api__source.server_dest }}/.venv/bin/python"
+    - name: Reset python interpreter
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: '{{ api__dest }}/.venv/bin/python'
 
 - name: Migrate Django DB
   become: true
-  become_user: "{{ ansible_web_user }}"
+  become_user: '{{ ansible_web_user }}'
   block:
     - name: Django - make general migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py makemigrations'
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make authentication migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations authentication"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py makemigrations authentication'
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make user_profile migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations user_profile"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py makemigrations user_profile'
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make files migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations files"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py makemigrations files'
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - make vpn migrations
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py makemigrations vpn"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py makemigrations vpn'
       register: retval
       changed_when: '"No changes detected" not in retval.stdout'
     - name: Django - migrate
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py migrate"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py migrate'
       register: retval
       changed_when: '"No migrations to apply" not in retval.stdout'
     - name: Django - collect static files
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py collectstatic --noinput"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py collectstatic --noinput'
       register: retval
       changed_when: '"0 static files copied" not in retval.stdout'
     - name: Django - create cache table
       ansible.builtin.command:
-        cmd: "{{ ansible_python_interpreter }} {{ web__root }}/{{ api__source.server_dest }}/manage.py createcachetable"
+        cmd: '{{ ansible_python_interpreter }} {{ api__dest }}/manage.py createcachetable'
       register: retval
       changed_when: '"already exists" not in retval.stdout'
 
-- name: Set permissions for static api folder
+- name: Set general permissions for api folder
   ansible.builtin.file:
-    path: "{{ web__root }}/{{ api__source.server_dest }}/static"
+    path: '{{ api__dest }}'
     state: directory
-    owner: "{{ ansible_web_user }}"
-    recurse: true
+    owner: '{{ ansible_web_user }}'
     group: www-data
     mode: u=rwX,g=rX,o=
-    follow: false
+    recurse: true
+
+- name: Restrict permissions for specific files
+  ansible.builtin.file:
+    path: '{{ api__dest }}/kurtn3x_api/settings.py'
+    owner: kurtn3x
+    group: nogroup
+    mode: '0600'
+  loop:
+    - '{{ api__dest }}/kurtn3x_api/settings.py'
+    - '{{ api__dest }}/kurtn3x_api/.env'
 
 - name: Copy gunicorn socket file
   ansible.builtin.copy:
@@ -256,7 +239,7 @@
     dest: /etc/systemd/system/gunicorn.socket
     owner: root
     group: root
-    mode: "0755"
+    mode: '0755'
 
 - name: Generate gunicorn service file
   ansible.builtin.template:
@@ -264,7 +247,7 @@
     dest: /etc/systemd/system/gunicorn.service
     owner: root
     group: root
-    mode: "0755"
+    mode: '0755'
 
 - name: Enable and start gunicorn
   ansible.builtin.systemd_service:

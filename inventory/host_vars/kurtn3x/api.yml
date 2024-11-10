@@ -1,7 +1,7 @@
 ---
-api__source:
-  source: git@github.com:kurtn3x/django-kurtn3x.git
-  server_dest: api
+api__source: /home/kurtn3x/main/django-kurtn3x
+api__dest: /var/www/kurtn3x.xyz/api
+
 api__postgresql_user: kurtn3x
 api__postgresql_database: kurtn3x
 api__postgresql_password: !vault |
@@ -20,4 +20,21 @@ api__django_secret_key: !vault |
   32313533663232663761323331313532353664303433376338383263356339313166353731343865
   66326462326336356430313766343538373061653762373831633862636134663263373262386238
   356638656337343561353337356630393932
-api__redeploy: true
+api__fernet_key: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  64373566623936363961636563626331363864393433346230376232663034643835633134363533
+  6233313932613232313130656437376362383933663536630a636532383634653935313663396462
+  36633564626461323461653365656439636137386563626632663462386235616164343565636662
+  3837663537306635660a666535626134626462313239373464373338363831303939616634396332
+  31623739633033393730366335616135396631343734303263363265626437646163393139373339
+  3864636166653939363634376633633133343138323666666437
+
+api__redeploy: false
+api__wireguard_ipv4_network: '{{ wireguard_server__ipv4_network }}'
+api__wireguard_ipv6_network: '{{ wireguard_server__ipv6_network }}'
+api__wireguard_ipv4_dns: "{{ wireguard_server__ipv4 | split('/') | first }}"
+api__wireguard_ipv6_dns: "{{ wireguard_server__ipv6 | split('/') | first }}"
+api__wireguard_psk_path: '/var/wireguard/psk'
+api__wireguard_public_key: ''
+api__wireguard_public_key_path: '/etc/wireguard/public.key'
+api__wireguard_config_name: '{{ wireguard_server__config_name }}'

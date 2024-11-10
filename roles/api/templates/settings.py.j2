@@ -30,13 +30,24 @@ FILE_UPLOAD_PERMISSIONS = 0o640
 FILE_MAX_PATH_LEN = 255
 
 # VPN
-SERVER_IP_ADDRESS = "{{ ansible_host }}"
-VPN_IPV4_NETWORK = "{{ wireguard_server__ipv4_network }}"
-VPN_IPV6_NETWORK = "{{ wireguard_server__ipv6_network }}"
-VPN_DNS_SERVER_IPV4 = "{{ wireguard_server__ipv4 | split('/') | first }}"
-VPN_DNS_SERVER_IPV6 = "{{ wireguard_server__ipv6 | split('/') | first }}"
-VPN_PSK_SAVE_PATH = "{{ wireguard_server__psk_save_path }}"
-VPN_SERVER_PUBLIC_KEY = "{{ wireguard_server_public_key }}"
+VPN_ENDPOINT = "{{ ansible_host }}"
+VPN_IPV4_NETWORK = "{{ api__wireguard_ipv4_network }}"
+VPN_IPV4_DNS = "{{ api__wireguard_ipv4_dns }}"
+VPN_PSK_PATH = "{{ api__wireguard_psk_path }}"
+VPN_PUBLIC_KEY = "{{ public_key }}"
+VPN_CONFIG_NAME = "{{ api__wireguard_config_name}}"
+
+VPN_IPV6_ACTIVE = True
+VPN_IPV6_NETWORK = "{{ api__wireguard_ipv6_network }}"
+VPN_IPV6_DNS = "{{ api__wireguard_ipv6_dns }}"
+
+VPN_ALTERNATIVE_ROUTE__IPV4_NETWORK = "172.16.0.0/12"
+VPN_ALTERNATIVE_ROUTE__IPV6_NETWORK = "fdb5:a5db:5e40::/64"
+VPN_ALTERNATIVE_ROUTE__PUBLIC_KEY = "jf14GoDTxDUJBDc2HSMAYxgW9OaZC9hrCi4NY5kB91g="
+VPN_ALTERNATIVE_ROUTE__ENDPOINT = "85.235.66.68"
+VPN_ALTERNATIVE_ROUTE__SSH_USER = "wg_middleman"
+VPN_ALTERNATIVE_ROUTE__CONFIG_NAME = "gate0"
+VPN_ALTERNATIVE_ROUTE__PSK_PATH = "{{ api__wireguard_psk_path }}"
 
 # CORS & CSRF
 ALLOWED_HOSTS = [".kurtn3x.xyz"]

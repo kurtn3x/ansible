@@ -7,5 +7,5 @@ server:
   hosts:
     kurtn3x:
       ansible_host: 193.218.118.220
-    wireguard_router:
+    wireguard_middleman:
       ansible_host: 85.235.66.68

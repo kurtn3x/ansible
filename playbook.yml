@@ -10,4 +10,4 @@
     - squid
     - dns
     - wireguard_server
-    - wireguard_client
+    - wireguard_middleman

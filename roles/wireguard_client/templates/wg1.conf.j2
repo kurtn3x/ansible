@@ -1,9 +1,0 @@
-[Interface]
-PrivateKey = {{ wireguard_client__private_key }}
-Address = {{ wireguard_client__ips }}
-DNS = {{ wireguard_client__dns }}
-[Peer]
-PresharedKey = {{ wireguard_client__peer_psk }}
-PublicKey = {{ wireguard_client__peer_public_key }}
-AllowedIPs = {{ wireguard_client__allowed_ips }}
-Endpoint = {{ wireguard_client__endpoint }}

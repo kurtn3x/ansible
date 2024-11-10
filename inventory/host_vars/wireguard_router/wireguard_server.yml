@@ -1,6 +1,0 @@
----
-wireguard_server__router: true
-wireguard_server__router_gateway_public_key: P5nklo1I4+/3oTP0MVroW4FEd5TzkCmswlRkWN5IYno=
-wireguard_server__router_gateway_address: 193.218.118.220:51820
-wireguard_server__ipv4: 10.0.0.16/8
-wireguard_server__ipv6: fde9:9757:b59b::10/64

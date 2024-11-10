@@ -1,0 +1,30 @@
+---
+- name: Create middleman user
+  ansible.builtin.user:
+    name: wg_middleman
+    comment: Middleman User for API
+    group: sudo
+    shell: /bin/bash
+    create_home: true
+
+- name: Add user to sudoers
+  ansible.builtin.copy:
+    content: 'wg_middleman ALL=(ALL) NOPASSWD: /bin/wg'
+    dest: /etc/sudoers.d/wg_middleman
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Set authorized key defining key options
+  ansible.posix.authorized_key:
+    user: wg_middleman
+    state: present
+    key: '{{ wireguard_middleman__endpoint_key }}'
+
+- name: Create wireguard psk folder
+  ansible.builtin.file:
+    path: '{{ wireguard_middleman__psk_path }}'
+    state: directory
+    owner: wg_middleman
+    group: nogroup
+    mode: '0700'

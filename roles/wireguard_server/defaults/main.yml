@@ -1,2 +1,18 @@
 ---
-wireguard_server__router: false
+# IP ADDRESSES SHOULD BE IN CIDR NOTATION
+# MINIMAL REQUIRED VARIABLES
+wireguard_server__config_name: 'gate0'
+wireguard_server__out_interface: ''
+wireguard_server__ipv4_network: '10.0.0.0/8'
+wireguard_server__ipv4: '10.0.0.1/8'
+
+# OPTIONAL VARIABLES
+wireguard_server__special_rules: []
+wireguard_server__route: false
+# if ipv6 is used
+wireguard_server__ipv6: ''
+wireguard_server__ipv6_network: ''
+# if ipv6 is used and wireguard_server__route is true
+wireguard_server__route_to_ipv6: ''
+# if wireguard_server__route is true
+wireguard_server__route_endpoint_conf: 'wg0'

@@ -1,4 +1,4 @@
 ---
 - name: Import untagged tasks
   ansible.builtin.import_tasks: untagged.yml
-  tags: wireguard_client
+  tags: wireguard_middleman

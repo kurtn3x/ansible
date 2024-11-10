@@ -20,13 +20,14 @@ server:
   root-hints: "/var/lib/unbound/root.hints"
 
   #Respond to DNS requests on all interfaces
-  interface: wg0
-  interface: wg0
+  interface: {{ wireguard_server__config_name }}
+  interface: lo
   max-udp-size: 3072
 
   #Authorized IPs to access the DNS Server
   access-control: 0.0.0.0/0                 refuse
   access-control: 127.0.0.1                 allow
+
   access-control: {{ wireguard_server__ipv4_network }}                 allow
   access-control: {{ wireguard_server__ipv6_network }}                 allow
 

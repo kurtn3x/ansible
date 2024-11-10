@@ -12,7 +12,7 @@
     dest: /etc/unbound/unbound.conf
     owner: root
     group: root
-    mode: "0644"
+    mode: '0644'
 
 - name: Copy unbound blocklist script
   ansible.builtin.copy:
@@ -20,13 +20,13 @@
     dest: /etc/unbound/gen_blocklist.sh
     owner: root
     group: root
-    mode: "0755"
+    mode: '0755'
 
 - name: Create cronjob for unbound blocklist script
   ansible.builtin.cron:
-    name: "Run unbound blocklist script"
+    name: 'Run unbound blocklist script'
     special_time: weekly
-    job: "/etc/unbound/gen_blocklist.sh"
+    job: '/etc/unbound/gen_blocklist.sh'
 
 - name: Enable and start unbound
   ansible.builtin.systemd_service:
@@ -41,16 +41,16 @@
         rule: allow
         port: 22
 
-    - name: Allow dns (53) on wg0
-      community.general.ufw:
-        rule: allow
-        port: 53
-        interface_in: wg0
-
     - name: Enable Firewall and block traffic by default
       community.general.ufw:
         default: reject
         state: enabled
+
+    - name: Allow dns (53) on wg interface
+      community.general.ufw:
+        rule: allow
+        port: 53
+        interface_in: '{{ wireguard_server__config_name }}'
 
     - name: Enable and start ufw
       ansible.builtin.service:

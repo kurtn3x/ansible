@@ -1,0 +1,3 @@
+---
+api__wireguard_public_key: ''
+api__wireguard_public_key_path: '/etc/wireguard/public.key'
