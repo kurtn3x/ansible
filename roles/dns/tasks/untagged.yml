@@ -41,16 +41,17 @@
         rule: allow
         port: 22
 
-    - name: Enable Firewall and block traffic by default
-      community.general.ufw:
-        default: reject
-        state: enabled
-
     - name: Allow dns (53) on wg interface
       community.general.ufw:
         rule: allow
         port: 53
-        interface_in: '{{ wireguard_server__config_name }}'
+        interface_in: '{{ item }}'
+      loop: '{{ dns__interface }}'
+
+    - name: Enable Firewall and block traffic by default
+      community.general.ufw:
+        default: reject
+        state: enabled
 
     - name: Enable and start ufw
       ansible.builtin.service:

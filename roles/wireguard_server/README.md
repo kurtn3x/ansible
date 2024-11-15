@@ -23,7 +23,7 @@
     - If you forgot to change allowed_ips to the next-hop internal network, your server is down now
 - set additional variables:
   - wireguard_server__route: true
-  - wireguard_server__route_to_ipv4: 10.0.0.5
-  - wireguard_server__route_to_ipv6: ipv6 address in network of next hop (if ipv6 is used)
+  - wireguard_server__route_interface_ipv4: 10.0.0.5
+  - wireguard_server__route_interface_ipv6: ipv6 address in network of next hop (if ipv6 is used)
 - deploy role
 - setup configuration for the client on the middleman

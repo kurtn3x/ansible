@@ -15,19 +15,19 @@ PostUp = iptables --insert INPUT -p tcp --match tcp --match conntrack --destinat
 PostUp = iptables --insert INPUT -p tcp --match tcp --match conntrack --destination-port 22 --ctstate NEW -j ACCEPT
 PostUp = iptables --insert FORWARD -i {{ wireguard_server__config_name }} --match conntrack -o {{ wireguard_server__config_name }} --ctstate NEW -j ACCEPT
 PostUp = iptables -t nat --insert POSTROUTING -s {{ wireguard_server__ipv4_network }} -o {{ wireguard_server__out_interface }} -j MASQUERADE
-PostUp = iptables -t nat --insert POSTROUTING -s {{ wireguard_server__ipv4_network }} -j SNAT --to-source {{ wireguard_server__route_to_ipv4 }}
-PostUp = ip route add 0.0.0.0/0 dev {{ wireguard_server__route_endpoint_conf }} table middleman
+PostUp = iptables -t nat --insert POSTROUTING -s {{ wireguard_server__ipv4_network }} -j SNAT --to-source {{ wireguard_server__route_interface_ipv4 }}
+PostUp = ip route add 0.0.0.0/0 dev {{ wireguard_server__route_interface }} table middleman
 PostUp = ip rule add from {{ wireguard_server__ipv4_network }} lookup middleman
 
-{% if wireguard_server__ipv6_network and  wireguard_server__ipv6 and wireguard_server__route_to_ipv6 %}
+{% if wireguard_server__ipv6_network and  wireguard_server__ipv6 and wireguard_server__route_interface_ipv6 %}
 PostUp = ip6tables --insert FORWARD --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 PostUp = ip6tables --insert INPUT --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 PostUp = ip6tables --insert INPUT -p tcp --match tcp --match conntrack --destination-port 51820 --ctstate NEW -j ACCEPT
 PostUp = ip6tables --insert INPUT -p tcp --match tcp --match conntrack --destination-port 22 --ctstate NEW -j ACCEPT
 PostUp = ip6tables --insert FORWARD -i {{ wireguard_server__config_name }} --match conntrack -o {{ wireguard_server__config_name }} --ctstate NEW -j ACCEPT
 PostUp = ip6tables -t nat --insert POSTROUTING -s {{wireguard_server__ipv6_network }} -o {{ wireguard_server__out_interface }} -j MASQUERADE
-PostUp = ip6tables -t nat --insert POSTROUTING -s {{ wireguard_server__ipv6_network }} -j SNAT --to-source {{ wireguard_server__route_to_ipv6 }} 
-PostUp = ip -6 route add ::/0 dev {{ wireguard_server__route_endpoint_conf }} table middleman
+PostUp = ip6tables -t nat --insert POSTROUTING -s {{ wireguard_server__ipv6_network }} -j SNAT --to-source {{ wireguard_server__route_interface_ipv6 }} 
+PostUp = ip -6 route add ::/0 dev {{ wireguard_server__route_interface }} table middleman
 PostUp = ip -6 rule add from {{ wireguard_server__ipv6_network }} lookup middleman
 {% endif %}
 
@@ -37,19 +37,19 @@ PreDown = iptables --delete INPUT -p tcp --match tcp --match conntrack --destina
 PreDown = iptables --delete INPUT -p tcp --match tcp --match conntrack --destination-port 22 --ctstate NEW -j ACCEPT
 PreDown = iptables --delete FORWARD -i {{ wireguard_server__config_name }} --match conntrack -o {{ wireguard_server__config_name }} --ctstate NEW -j ACCEPT
 PreDown = iptables -t nat --delete POSTROUTING -s {{ wireguard_server__ipv4_network }} -o {{ wireguard_server__out_interface }} -j MASQUERADE
-PreDown = iptables -t nat --delete POSTROUTING -s {{ wireguard_server__ipv4_network }} -j SNAT --to-source {{ wireguard_server__route_to_ipv4 }}
-PreDown = ip route del 0.0.0.0/0 dev {{ wireguard_server__route_endpoint_conf }} table middleman
+PreDown = iptables -t nat --delete POSTROUTING -s {{ wireguard_server__ipv4_network }} -j SNAT --to-source {{ wireguard_server__route_interface_ipv4 }}
+PreDown = ip route del 0.0.0.0/0 dev {{ wireguard_server__route_interface }} table middleman
 PreDown = ip rule del from {{ wireguard_server__ipv4_network }} lookup middleman
 
-{% if wireguard_server__ipv6_network and  wireguard_server__ipv6 and wireguard_server__route_to_ipv6 %}
+{% if wireguard_server__ipv6_network and  wireguard_server__ipv6 and wireguard_server__route_interface_ipv6 %}
 PreDown = ip6tables --delete INPUT --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 PreDown = ip6tables --delete FORWARD --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 PreDown = ip6tables --delete INPUT -p tcp --match tcp --match conntrack --destination-port 51820 --ctstate NEW -j ACCEPT
 PreDown = ip6tables --delete INPUT -p tcp --match tcp --match conntrack --destination-port 22 --ctstate NEW -j ACCEPT
 PreDown = ip6tables --delete FORWARD -i {{ wireguard_server__config_name }} --match conntrack -o {{ wireguard_server__config_name }} --ctstate NEW -j ACCEPT
 PreDown = ip6tables -t nat --delete POSTROUTING -s {{wireguard_server__ipv6_network }} -o {{ wireguard_server__out_interface }} -j MASQUERADE
-PreDown = ip6tables -t nat --delete POSTROUTING -s {{ wireguard_server__ipv6_network }} -j SNAT --to-source {{ wireguard_server__route_to_ipv6 }}
-PreDown = ip -6 route del ::/0 dev {{ wireguard_server__route_endpoint_conf }} table middleman
+PreDown = ip6tables -t nat --delete POSTROUTING -s {{ wireguard_server__ipv6_network }} -j SNAT --to-source {{ wireguard_server__route_interface_ipv6 }}
+PreDown = ip -6 route del ::/0 dev {{ wireguard_server__route_interface }} table middleman
 PreDown = ip -6 rule del from {{ wireguard_server__ipv6_network }} lookup middleman
 {% endif %}
 

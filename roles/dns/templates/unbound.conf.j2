@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 # Unbound configuration file for Debian.
 #
 # See the unbound.conf(5) man page.
@@ -20,20 +21,23 @@ server:
   root-hints: "/var/lib/unbound/root.hints"
 
   #Respond to DNS requests on all interfaces
-  interface: {{ wireguard_server__config_name }}
   interface: lo
+{% for interface in dns__interface %}
+  interface: {{ interface }}
+{% endfor %}
   max-udp-size: 3072
 
   #Authorized IPs to access the DNS Server
   access-control: 0.0.0.0/0                 refuse
   access-control: 127.0.0.1                 allow
-
-  access-control: {{ wireguard_server__ipv4_network }}                 allow
-  access-control: {{ wireguard_server__ipv6_network }}                 allow
+{% for allow in dns__allow %}
+  access-control: {{ allow }}                 allow
+{% endfor %}
 
   #not allowed to be returned for public internet  names
-  private-address: {{ wireguard_server__ipv4_network }}
-  private-address: {{ wireguard_server__ipv6_network }}
+{% for private in dns__private %}
+  private-address: {{ private }}
+{% endfor %}
 
   # Hide DNS Server info
   hide-identity: yes

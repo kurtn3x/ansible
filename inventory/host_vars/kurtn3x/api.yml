@@ -30,6 +30,7 @@ api__fernet_key: !vault |
   3864636166653939363634376633633133343138323666666437
 
 api__redeploy: false
+# info for django settings.py
 api__wireguard_ipv4_network: '{{ wireguard_server__ipv4_network }}'
 api__wireguard_ipv6_network: '{{ wireguard_server__ipv6_network }}'
 api__wireguard_ipv4_dns: "{{ wireguard_server__ipv4 | split('/') | first }}"

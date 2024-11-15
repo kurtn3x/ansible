@@ -13,6 +13,6 @@ wireguard_server__route: false
 wireguard_server__ipv6: ''
 wireguard_server__ipv6_network: ''
 # if ipv6 is used and wireguard_server__route is true
-wireguard_server__route_to_ipv6: ''
+wireguard_server__route_interface_ipv6: ''
 # if wireguard_server__route is true
-wireguard_server__route_endpoint_conf: 'wg0'
+wireguard_server__route_interface: 'wg0'

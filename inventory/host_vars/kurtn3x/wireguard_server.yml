@@ -6,7 +6,3 @@ wireguard_server__ipv4_network: 10.0.0.0/8
 wireguard_server__ipv6_network: fde9:9757:b59b::/64
 wireguard_server__ipv4: 10.0.0.1/8
 wireguard_server__ipv6: fde9:9757:b59b::1/64
-
-wireguard_server__special_rules:
-  - 'PostUp = ufw allow in on {{ wireguard_server__config_name }} to any port 53'
-  - 'PreDown = ufw delete in on {{ wireguard_server__config_name }} to any port 53'

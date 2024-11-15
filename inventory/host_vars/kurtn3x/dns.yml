@@ -1,0 +1,9 @@
+---
+dns__interface:
+  - '{{ wireguard_server__config_name }}'
+dns__allow:
+  - '{{ wireguard_server__ipv4_network }}'
+  - '{{ wireguard_server__ipv6_network }}'
+dns__private:
+  - '{{ wireguard_server__ipv4_network }}'
+  - '{{ wireguard_server__ipv6_network }}'
