@@ -2,6 +2,7 @@
 - name: Install basic packages
   ansible.builtin.apt:
     update_cache: true
+    state: latest
     name:
       - python3.11
       - python3.11-venv
@@ -10,6 +11,7 @@
       - curl
       - git
       - bash
+      - vim-nox
 
 - name: Add private user
   ansible.builtin.user:

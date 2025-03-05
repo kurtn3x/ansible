@@ -4,8 +4,16 @@ server:
     ansible_user: root
     ansible_web_user: kurtn3x
     ansible_private_user: kurtn3x
+  children:
+    main_server:
+    routing_server:
+
+main_server:
   hosts:
     kurtn3x:
-      ansible_host: 193.218.118.220
+      ansible_host: kurtn3x.xyz
+
+routing_server:
+  hosts:
     wireguard_middleman:
       ansible_host: 85.235.66.68

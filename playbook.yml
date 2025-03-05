@@ -1,13 +1,26 @@
 ---
 - name: Run playbook
   gather_facts: false
-  hosts: server
+  hosts: main_server
   roles:
     - basic
     - security
+    - wireguard_server
     - web
     - api
     - squid
     - dns
+    # - wireguard_middleman
+
+- name: Run playbook
+  gather_facts: false
+  hosts: routing_server
+  roles:
+    - basic
+    - security
     - wireguard_server
+    - web
+    - api
+    - squid
+    - dns
     - wireguard_middleman

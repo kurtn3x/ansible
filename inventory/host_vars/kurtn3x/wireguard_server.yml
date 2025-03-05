@@ -1,6 +1,11 @@
 ---
 wireguard_server__config_name: gate0
-wireguard_server__out_interface: enp1s0
+
+# URDN
+# wireguard_server__out_interface: enp1s0
+
+# AVA
+wireguard_server__out_interface: ens18
 
 wireguard_server__ipv4_network: 10.0.0.0/8
 wireguard_server__ipv6_network: fde9:9757:b59b::/64

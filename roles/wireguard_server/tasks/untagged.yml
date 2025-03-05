@@ -2,10 +2,16 @@
 - name: Install wireguard, ufw & resolvconf
   ansible.builtin.apt:
     update_cache: true
+    state: latest
     name:
       - wireguard
       - ufw
       - resolvconf
+
+- name: Set temporary dns server after installing resolv.conf
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.conf
+    line: nameserver 9.9.9.9
 
 - name: Check if private key exists
   ansible.builtin.stat:
@@ -17,14 +23,12 @@
     cmd: set -o pipefail && wg genkey | tee /etc/wireguard/private.key
     executable: /bin/bash
   changed_when: true
-  register: private_key
   when: not stat_result.stat.exists
 
 - name: Get Private-Key
   ansible.builtin.command:
     cmd: cat /etc/wireguard/private.key
   register: private_key
-  when: stat_result.stat.exists
   changed_when: false
 
 - name: Change file ownership, group and permissions
@@ -45,7 +49,6 @@
     cmd: set -o pipefail && cat /etc/wireguard/private.key | wg pubkey | tee /etc/wireguard/public.key
     executable: /bin/bash
   changed_when: true
-  register: public_key
   when: not stat_result.stat.exists
 
 - name: Get Public-Key
@@ -53,7 +56,6 @@
     cmd: cat /etc/wireguard/private.key
   changed_when: false
   register: public_key
-  when: stat_result.stat.exists
 
 - name: Set privatekey to ansible variable
   ansible.builtin.set_fact:

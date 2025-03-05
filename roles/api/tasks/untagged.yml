@@ -2,6 +2,7 @@
 - name: Install required dependencies
   ansible.builtin.apt:
     update_cache: true
+    state: latest
     name:
       - postgresql
       - postgresql-contrib
@@ -11,6 +12,7 @@
       - python3-dev
       - libpq-dev
       - curl
+      - rsync
 
 - name: Wipe existing database
   become: true
@@ -77,6 +79,7 @@
   ansible.builtin.pip:
     virtualenv: '{{ api__dest }}/.venv'
     virtualenv_command: 'python3.11 -m venv'
+    state: latest
     name:
       - django
       - django-axes
@@ -108,10 +111,12 @@
   register: pub_key
   failed_when: '"No such file or directory" in pub_key.stdout'
   when: not api__wireguard_public_key
+  tags: api_settings
 
 - name: Set wireguard public key variable for django-settings
   ansible.builtin.set_fact:
     public_key: '{{  api__wireguard_public_key if api__wireguard_public_key else pub_key.stdout }}'
+  tags: api_settings
 
 - name: Generate settings.py from template
   ansible.builtin.template:
@@ -120,6 +125,7 @@
     owner: kurtn3x
     group: nogroup
     mode: '0600'
+  tags: api_settings
 
 - name: Generate .env-file from template
   ansible.builtin.template:
@@ -128,6 +134,7 @@
     owner: kurtn3x
     group: nogroup
     mode: '0600'
+  tags: api_settings
 
 - name: Postgresql commands
   become: true
@@ -225,12 +232,14 @@
 
 - name: Restrict permissions for specific files
   ansible.builtin.file:
-    path: '{{ api__dest }}/kurtn3x_api/settings.py'
+    path: '{{ item }}'
     owner: kurtn3x
     group: nogroup
     mode: '0600'
   loop:
     - '{{ api__dest }}/kurtn3x_api/.env'
+    - '{{ api_dest }}/kurtn3x_api/settings.py'
+  tags: api_settings
 
 - name: Copy gunicorn socket file
   ansible.builtin.copy:

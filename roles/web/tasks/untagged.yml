@@ -2,6 +2,7 @@
 - name: Install nginx, certbot, git & ufw
   ansible.builtin.apt:
     update_cache: true
+    state: latest
     name:
       - nginx
       - certbot
@@ -54,9 +55,9 @@
 
 - name: Run certbot for installed sites
   ansible.builtin.command:
-    cmd: 'certbot -d {{ item }}  --nginx --non-interactive --agree-tos -m kurtn3x@gmail.com'
+    cmd: 'certbot -d {{ item.path | basename }} --nginx --non-interactive --agree-tos -m kurtn3x@gmail.com'
   changed_when: true
-  loop: '{{ local_nginx_configs }}'
+  loop: '{{ local_nginx_configs.files }}'
   when: "item.path | basename not in remote_nginx_configs.files | map(attribute='path') | map('basename')"
 
 - name: Create www directories

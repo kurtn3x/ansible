@@ -2,6 +2,7 @@
 - name: Install fail2ban, unattended-upgrades & ufw
   ansible.builtin.apt:
     update_cache: true
+    state: latest
     name:
       - fail2ban
       - unattended-upgrades

@@ -6,7 +6,11 @@ web__root: /var/www/kurtn3x.xyz
 # enabled specifies if the site should be copied
 # should be turned of manually if there are no changes
 web__quasar_sources:
-  - source: /home/kurtn3x/main/kurtn3x.xyz_quasar
+  - source: /home/kurt/main/kurt/kurtn3x.xyz_quasar
     dest: www
+    quasar_build: true
+    enabled: true
+  - source: /home/kurt/main/kurt/Ausbildungsseite
+    dest: ausbildung
     quasar_build: true
     enabled: true
