@@ -118,6 +118,31 @@
     public_key: '{{  api__wireguard_public_key if api__wireguard_public_key else pub_key.stdout }}'
   tags: api_settings
 
+- name: Set variables for settings.py
+  block:
+    - name: Check if public key exists
+      ansible.builtin.stat:
+        path: /etc/wireguard/client_public.key
+      changed_when: false
+      when: host_vars['wireguard_middleman'] | default('') != ''
+      register: stat_result
+      delegate_to: wireguard_middleman
+
+    - name: Get Public-Key
+      ansible.builtin.command:
+        cmd: cat /etc/wireguard/client_public.key
+      when: host_vars['wireguard_middleman'] | default('') != ''
+      changed_when: false
+      register: c_public_key
+
+    - name: Set facts
+      ansible.builtin.set_fact:
+        api__wireguard_route_ipv4_network: "{{ host_vars['wireguard_middleman'].wireguard_server__ipv4_network | default('') }}"
+        api__wireguard_route_ipv6_network: "{{ host_vars['wireguard_middleman'].wireguard_server__ipv6_network | default('') }}"
+        api__wireguard_route_public_key: "{{ c_public_key.stdout | default('') }}"
+        api__wireguard_route_endpoint: "{{ host_vars['wireguard_middleman'].ansible_host | default('') }}"
+        api__wireguard_route_config_name: "{{ host_vars['wireguard_middleman'].wireguard_server__config_name | default('') }}"
+
 - name: Generate settings.py from template
   ansible.builtin.template:
     src: templates/settings.py.j2
@@ -238,7 +263,7 @@
     mode: '0600'
   loop:
     - '{{ api__dest }}/kurtn3x_api/.env'
-    - '{{ api_dest }}/kurtn3x_api/settings.py'
+    - '{{ api__dest }}/kurtn3x_api/settings.py'
   tags: api_settings
 
 - name: Copy gunicorn socket file
@@ -257,7 +282,15 @@
     group: root
     mode: '0644'
 
-- name: Enable and start gunicorn
+- name: Copy private key
+  ansible.builtin.copy:
+    src: files/id_rsa
+    dest: '/home/{{ ansible_web_user }}/.ssh/id_rsa'
+    mode: '0600'
+    owner: '{{ ansible_web_user }}'
+    group: '{{ ansible_web_user }}'
+
+- name: Enable and (re-)start gunicorn
   ansible.builtin.systemd_service:
     name: gunicorn
     state: restarted

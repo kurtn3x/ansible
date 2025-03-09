@@ -42,12 +42,12 @@ VPN_IPV6_ACTIVE = True
 VPN_IPV6_NETWORK = "{{ api__wireguard_ipv6_network }}"
 VPN_IPV6_DNS = "{{ api__wireguard_ipv6_dns }}"
 
-VPN_ALTERNATIVE_ROUTE__IPV4_NETWORK = "172.16.0.0/12"
-VPN_ALTERNATIVE_ROUTE__IPV6_NETWORK = "fdb5:a5db:5e40::/64"
-VPN_ALTERNATIVE_ROUTE__PUBLIC_KEY = "jf14GoDTxDUJBDc2HSMAYxgW9OaZC9hrCi4NY5kB91g="
-VPN_ALTERNATIVE_ROUTE__ENDPOINT = "85.235.66.68"
+VPN_ALTERNATIVE_ROUTE__IPV4_NETWORK = "{{ api__wireguard_route_ipv4_network }}"
+VPN_ALTERNATIVE_ROUTE__IPV6_NETWORK = "{{ api__wireguard_route_ipv6_network }}"
+VPN_ALTERNATIVE_ROUTE__PUBLIC_KEY = "{{ api__wireguard_route_public_key}}"
+VPN_ALTERNATIVE_ROUTE__ENDPOINT = "{{ api__wireguard_route_endpoint }}"
 VPN_ALTERNATIVE_ROUTE__SSH_USER = "wg_middleman"
-VPN_ALTERNATIVE_ROUTE__CONFIG_NAME = "gate0"
+VPN_ALTERNATIVE_ROUTE__CONFIG_NAME = "{{ api__wireguard_route_config_name }}"
 VPN_ALTERNATIVE_ROUTE__PSK_PATH = "{{ api__wireguard_psk_path }}"
 
 # CORS & CSRF

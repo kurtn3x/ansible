@@ -1,0 +1,8 @@
+[Interface]
+PrivateKey = {{ routing_private_key }}
+Address = {{ wireguard_server__route_interface_ipv4 }}{{ ',' + wireguard_server__route_interface_ipv6 if wireguard_server__route_interface_ipv6 is defined and wireguard_server__route_interface_ipv6 else '' }}
+DNS = {{ endpoint_ipv4_dns }}{{ ',' + endpoint_ipv6_dns if endpoint_ipv6_dns is defined and endpoint_ipv6_dns else '' }}
+[Peer]
+PublicKey = {{ endpoint_public_key }}
+AllowedIPs = {{ endpoint_network_ipv4 }}{{ ',' + endpoint_network_ipv6 if endpoint_network_ipv6 is defined and endpoint_network_ipv6 else '' }}
+Endpoint = kurtn3x.xyz:51820

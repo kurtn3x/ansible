@@ -53,7 +53,7 @@
 
 - name: Get Public-Key
   ansible.builtin.command:
-    cmd: cat /etc/wireguard/private.key
+    cmd: cat /etc/wireguard/public.key
   changed_when: false
   register: public_key
 
@@ -70,12 +70,95 @@
   changed_when: false
   failed_when: existing_peers.rc > 1 and 'No such file or directory' not in existing_peers.stderr
 
-- name: Add routing table
-  ansible.builtin.lineinfile:
-    name: /etc/iproute2/rt_tables
-    line: '1 middleman'
-    state: present
-  when: wireguard_server__route
+- name: Generate Routing config
+  when: 'wireguard_server__route'
+  block:
+    - name: Check if client private key exists
+      ansible.builtin.stat:
+        path: /etc/wireguard/client_private.key
+      register: stat_result
+
+    - name: Generate Client Private-Key
+      ansible.builtin.shell:
+        cmd: set -o pipefail && wg genkey | tee /etc/wireguard/client_private.key
+        executable: /bin/bash
+      changed_when: true
+      when: not stat_result.stat.exists
+
+    - name: Get Client Private-Key
+      ansible.builtin.command:
+        cmd: cat /etc/wireguard/client_private.key
+      register: c_private_key
+      changed_when: false
+
+    - name: Change file ownership, group and permissions
+      ansible.builtin.file:
+        path: /etc/wireguard/private.key
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Check if public key exists
+      ansible.builtin.stat:
+        path: /etc/wireguard/client_public.key
+      changed_when: false
+      register: stat_result
+
+    - name: Generate Public-Key
+      ansible.builtin.shell:
+        cmd: set -o pipefail && cat /etc/wireguard/client_private.key | wg pubkey | tee /etc/wireguard/client_public.key
+        executable: /bin/bash
+      changed_when: true
+      when: not stat_result.stat.exists
+
+    - name: Get Public-Key
+      ansible.builtin.command:
+        cmd: cat /etc/wireguard/client_public.key
+      changed_when: false
+      register: c_public_key
+
+    - name: Get Public-Key of Endpoint
+      ansible.builtin.command:
+        cmd: cat /etc/wireguard/public.key
+      changed_when: false
+      register: e_public_key
+      delegate_to: kurtn3x
+
+    - name: Set privatekey to ansible variable
+      ansible.builtin.set_fact:
+        routing_private_key: '{{ c_private_key.stdout }}'
+        routing_public_key: '{{ c_public_key.stdout }}'
+        endpoint_public_key: '{{ e_public_key.stdout }}'
+        endpoint_network_ipv4: '{{ hostvars["kurtn3x"].wireguard_server__ipv4_network }}'
+        endpoint_network_ipv6: '{{ hostvars["kurtn3x"].wireguard_server__ipv6_network | default("") }}'
+        endpoint_ipv4_dns: '{{ hostvars["kurtn3x"].wireguard_server__ipv4 }}'
+        endpoint_ipv6_dns: '{{ hostvars["kurtn3x"].wireguard_server__ipv6 | default("") }}'
+
+    - name: Add routing table
+      ansible.builtin.lineinfile:
+        name: /etc/iproute2/rt_tables
+        line: '1 middleman'
+        state: present
+
+    - name: Generate config
+      ansible.builtin.template:
+        src: templates/client.conf.j2
+        dest: '/etc/wireguard/{{ wireguard_server__route_interface }}.conf'
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Set peer on endpoint
+      ansible.builtin.command:
+        cmd: 'wg set gate0 peer {{ routing_public_key }} allowed-ips {{ wireguard_server__route_interface_ipv4 }}{{ "," + wireguard_server__route_interface_ipv6 if wireguard_server__route_interface_ipv6 is defined and wireguard_server__route_interface_ipv6 else "" }}'
+      changed_when: true
+      delegate_to: kurtn3x
+
+    - name: Start client config
+      ansible.builtin.systemd_service:
+        name: 'wg-quick@{{ wireguard_server__route_interface }}.service'
+        state: restarted
+        enabled: true
 
 - name: Create server configuration
   ansible.builtin.template:
@@ -88,7 +171,7 @@
 - name: Enable and start wireguard
   ansible.builtin.systemd_service:
     name: 'wg-quick@{{ wireguard_server__config_name }}.service'
-    state: restarted
+    state: started
     enabled: true
 
 - name: Get endpoint key for routing
@@ -101,10 +184,17 @@
 
 - name: Set allowed ips to allow all for endpoint routing
   ansible.builtin.command:
-    cmd: 'wg set {{ wireguard_server__route_interface }} peer {{ peer_output.stdout }} \
-      allowed-ips 0.0.0.0/0,{{ "::/0" if wireguard_server__route_interface_ipv6 and wireguard_server__ipv6 and wireguard_server__ipv6_network else "" }}'
+    cmd: 'wg set {{ wireguard_server__route_interface }} peer {{ peer_output.stdout }} allowed-ips 0.0.0.0/0,{{ "::/0" if wireguard_server__route_interface_ipv6 and wireguard_server__ipv6 and wireguard_server__ipv6_network else "" }}'
   changed_when: true
   when: wireguard_server__route and peer_output.rc == 0
+
+- name: Add web user to sudoers
+  ansible.builtin.copy:
+    content: '{{ ansible_web_user }} ALL=(ALL) NOPASSWD: /usr/bin/wg'
+    dest: '/etc/sudoers.d/{{ ansible_web_user }}'
+    owner: root
+    group: root
+    mode: '0600'
 
 # fix this
 # the firewall config "Allow forwarding from in to out" is needed for some reason???
@@ -129,7 +219,7 @@
         route: true
         interface_in: '{{ wireguard_server__config_name }}'
         interface_out: '{{ wireguard_server__route_interface }}'
-      when: wireguard_server__route and peer_output.rc == 0
+      # when: peer_output.rc == 0
 
     - name: Enable Firewall and block traffic by default
       community.general.ufw:

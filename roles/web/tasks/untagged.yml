@@ -68,6 +68,8 @@
     group: 'www-data'
     mode: u=rwX,g=rX,o=rX
   loop: '{{ web__quasar_sources }}'
+  loop_control:
+    label: 'Create {{ web__root }}/{{ item.dest }}'
 
 - name: Build quasar projects locally
   ansible.builtin.command: quasar build
@@ -75,19 +77,24 @@
     chdir: '{{ item.source }}'
   changed_when: true
   loop: '{{ web__quasar_sources }}'
+  loop_control:
+    label: 'Build {{ item.source }}'
   when: item.quasar_build and item.enabled
   delegate_to: localhost
   register: result
 
 - name: Copy quasar sources
-  ansible.builtin.copy:
+  ansible.posix.synchronize:
     src: '{{ item.source }}/dist/spa/'
     dest: '{{ web__root }}/{{ item.dest }}/.'
-    owner: '{{ ansible_web_user }}'
-    group: www-data
-    mode: u=rwX,g=rX,o=rX
   loop: '{{ web__quasar_sources }}'
+  loop_control:
+    label: 'Copy {{ item.source }}'
   when: item.quasar_build and item.enabled
+  become: true
+  become_user: '{{ ansible_web_user }}'
+  tags:
+    - web_sync
 
 - name: Copy favicon
   ansible.builtin.copy:
@@ -97,6 +104,8 @@
     group: www-data
     mode: u=rwX,g=rX,o=rX
   loop: '{{ web__quasar_sources }}'
+  tags:
+    - web_sync
 
 - name: Enable and start nginx
   ansible.builtin.systemd_service:

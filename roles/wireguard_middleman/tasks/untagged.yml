@@ -9,7 +9,7 @@
 
 - name: Add user to sudoers
   ansible.builtin.copy:
-    content: 'wg_middleman ALL=(ALL) NOPASSWD: /bin/wg'
+    content: 'wg_middleman ALL=(ALL) NOPASSWD: /usr/bin/wg'
     dest: /etc/sudoers.d/wg_middleman
     owner: root
     group: root

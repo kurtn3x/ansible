@@ -8,6 +8,16 @@ PostUp = echo 1 > /proc/sys/net/ipv4/ip_forward
 PostUp = echo 1 > /proc/sys/net/ipv4/conf/all/proxy_arp
 PostUp = echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 
+{% if not wireguard_server__route %}
+PostUp = iptables -t nat --insert POSTROUTING -o enp1s0 -j MASQUERADE
+PostUp = iptables --insert INPUT -p tcp --match tcp --match conntrack --destination-port 22 --ctstate NEW -j ACCEPT
+PostUp = ip6tables -t nat --insert POSTROUTING -o enp1s0 -j MASQUERADE
+
+PreDown = iptables --delete INPUT -p tcp --match tcp --match conntrack --destination-port 22 --ctstate NEW -j ACCEPT
+PreDown = ip6tables -t nat --delete POSTROUTING -o enp1s0 -j MASQUERADE
+PreDown = iptables -t nat --delete POSTROUTING -o enp1s0 -j MASQUERADE
+{% endif %}
+
 {% if wireguard_server__route %}
 PostUp = iptables --insert INPUT --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 PostUp = iptables --insert FORWARD --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -62,7 +72,6 @@ PreDown = ip6tables -t nat --delete POSTROUTING -s {{wireguard_server__ipv6_netw
 PostDown = echo 0 > /proc/sys/net/ipv4/ip_forward
 PostDown = echo 0 > /proc/sys/net/ipv4/conf/all/proxy_arp
 PostDown = echo 0 > /proc/sys/net/ipv6/conf/all/forwarding
-
 
 {% for special_rule in wireguard_server__special_rules %}
 {{ special_rule }}

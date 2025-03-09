@@ -1,7 +1,7 @@
 ---
 - name: Run playbook
   gather_facts: false
-  hosts: main_server
+  hosts: server
   roles:
     - basic
     - security
@@ -10,17 +10,8 @@
     - api
     - squid
     - dns
-    # - wireguard_middleman
-
-- name: Run playbook
-  gather_facts: false
-  hosts: routing_server
-  roles:
-    - basic
-    - security
-    - wireguard_server
-    - web
-    - api
-    - squid
-    - dns
-    - wireguard_middleman
+  tasks:
+    - name: Import wireguard_middleman role for middleman server
+      ansible.builtin.include_role:
+        name: wireguard_middleman
+      when: inventory_hostname == 'wireguard_middleman'
